@@ -16,7 +16,6 @@ import {
     saveCheckIns,
     saveDisclaimerAcknowledged,
     saveSupportPreference,
-    STORED_CHECKIN_LIMIT,
     summarizeNote,
     trackSupportAnalytics
 } from './lib/happyzone';
@@ -31,6 +30,7 @@ import { DisclaimerModal } from './components/DisclaimerModal';
 import { SupportModal } from './components/SupportModal';
 import { ThoughtReframerModal } from './components/ThoughtReframerModal';
 import { CalmingToolsPanel } from './components/CalmingToolsPanel';
+import { utilityIcons } from './lib/materialIcons';
 
 interface FormStatus {
     message: string;
@@ -101,6 +101,7 @@ export default function App() {
     const selectedFocusLabel = selectedFocus ? focusContent[selectedFocus].label : 'choose later';
     const activeFocus = selectedFocus ?? activeEntry?.focus ?? 'calm';
     const breathingInstruction = focusContent[activeFocus].resetCue;
+    const WarningIcon = utilityIcons.warning;
 
     const moodItems = (Object.keys(moodContent) as MoodKey[]).map((key) => ({
         value: key,
@@ -347,6 +348,7 @@ export default function App() {
                                             }}
                                             type="button"
                                         >
+                                            <WarningIcon className="button-icon" aria-hidden="true" />
                                             Get support
                                         </button>
                                     ) : null}
