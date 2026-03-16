@@ -30,6 +30,7 @@ import { PlanOutput } from './components/PlanOutput';
 import { DisclaimerModal } from './components/DisclaimerModal';
 import { SupportModal } from './components/SupportModal';
 import { ThoughtReframerModal } from './components/ThoughtReframerModal';
+import { CalmingToolsPanel } from './components/CalmingToolsPanel';
 
 interface FormStatus {
     message: string;
@@ -98,6 +99,8 @@ export default function App() {
         : null;
     const selectedMoodLabel = selectedMood ? moodContent[selectedMood].label : 'auto-detect';
     const selectedFocusLabel = selectedFocus ? focusContent[selectedFocus].label : 'choose later';
+    const activeFocus = selectedFocus ?? activeEntry?.focus ?? 'calm';
+    const breathingInstruction = focusContent[activeFocus].resetCue;
 
     const moodItems = (Object.keys(moodContent) as MoodKey[]).map((key) => ({
         value: key,
@@ -356,6 +359,11 @@ export default function App() {
 
                     <PlanOutput entry={activeEntry} />
 
+                    <CalmingToolsPanel
+                        breathingInstruction={breathingInstruction}
+                        onOpenThoughtReframer={() => setIsThoughtReframerOpen(true)}
+                    />
+
                     <HistoryPanel
                         entries={checkIns}
                         onSelect={(entry) => {
@@ -391,6 +399,7 @@ export default function App() {
                     onClose={() => setIsThoughtReframerOpen(false)}
                     onApplyBalancedTruth={(value) => {
                         const prefix = 'Balanced truth: ';
+                        setStep('journal');
                         setNote((current) => current.trim() ? `${current}\n\n${prefix}${value}` : `${prefix}${value}`);
                         setStatus({
                             message: 'Balanced thought added to your journal.',

@@ -23,6 +23,10 @@ async function openMoodInsights(page: Page) {
     await page.locator('details.halo-card:has-text("Mood insights") > summary.learn-more-summary').click();
 }
 
+async function openCalmingTools(page: Page) {
+    await page.locator('details.halo-panel:has-text("Calming tools") > summary.learn-more-summary').click();
+}
+
 test('generates a gentle action plan through the main flow', async ({ page }) => {
     await moveToJournal(page);
     await page.getByLabel(/what is happening right now/i).fill('I am worried about everything and it feels like the worst outcome is coming.');
@@ -61,6 +65,30 @@ test('lets a user work through the thought reframer and append the balanced trut
 
     await expect(page.getByLabel(/what is happening right now/i)).toHaveValue(
         'Balanced truth: This is hard, but it is not permanent and I have support.'
+    );
+});
+
+test('opens calming tools and launches the reframer outside the journal flow', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: /i understand/i }).click();
+
+    await openCalmingTools(page);
+    await page.getByRole('button', { name: /thought reframer/i }).click();
+    await page.getByRole('button', { name: /open thought reframer/i }).click();
+
+    const dialog = page.getByRole('dialog', { name: /help me reframe this thought/i });
+    await expect(dialog).toBeVisible();
+
+    await dialog.getByRole('textbox').fill('Everything is falling apart.');
+    await dialog.getByRole('button', { name: /^next$/i }).click();
+    await dialog.getByRole('textbox').fill('There are parts of today I can still control.');
+    await dialog.getByRole('button', { name: /^next$/i }).click();
+    await dialog.getByRole('textbox').fill('This is a hard day, but it is not the whole story.');
+    await dialog.getByRole('button', { name: /add to journal/i }).click();
+
+    await expect(page.getByRole('heading', { name: /journal/i })).toBeVisible();
+    await expect(page.getByLabel(/what is happening right now/i)).toHaveValue(
+        'Balanced truth: This is a hard day, but it is not the whole story.'
     );
 });
 

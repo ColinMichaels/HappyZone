@@ -66,4 +66,28 @@ describe('App regression coverage', () => {
         );
         expect(screen.getByText(/balanced thought added to your journal/i)).toBeInTheDocument();
     });
+
+    it('opens the calming tools reframer and routes the balanced truth into the journal step', async () => {
+        const user = userEvent.setup();
+        render(<App />);
+
+        await user.click(screen.getByRole('button', { name: /i understand/i }));
+        await user.click(screen.getByText(/calming tools/i));
+        await user.click(screen.getByRole('button', { name: /thought reframer/i }));
+        await user.click(screen.getByRole('button', { name: /open thought reframer/i }));
+
+        const dialog = await screen.findByRole('dialog', { name: /help me reframe this thought/i });
+
+        await user.type(within(dialog).getByRole('textbox'), 'This feels impossible.');
+        await user.click(within(dialog).getByRole('button', { name: /^next$/i }));
+        await user.type(within(dialog).getByRole('textbox'), 'I have made it through hard weeks before.');
+        await user.click(within(dialog).getByRole('button', { name: /^next$/i }));
+        await user.type(within(dialog).getByRole('textbox'), 'This is hard, but I can take one next step.');
+        await user.click(within(dialog).getByRole('button', { name: /add to journal/i }));
+
+        expect(screen.getByRole('heading', { name: /journal/i })).toBeInTheDocument();
+        expect(screen.getByLabelText(/what is happening right now/i)).toHaveValue(
+            'Balanced truth: This is hard, but I can take one next step.'
+        );
+    });
 });
