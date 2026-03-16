@@ -42,6 +42,8 @@ npm run build
 - `npm run test:e2e`: run Playwright browser tests
 - `npm run test:e2e:headed`: run Playwright in headed mode
 - `npm run test:ci`: run the full local verification gate
+- `npm run build:pages`: build with the GitHub Pages base path
+- `npm run deploy`: publish the current `dist/` folder with `gh-pages` as a manual fallback
 
 ## Testing
 
@@ -79,3 +81,5 @@ The browser tests stay local to the machine running them. The CI workflow in `.g
 ## Deployment
 
 Deploy the contents of `dist/` to any static host. No runtime server is required after build.
+
+GitHub Pages is wired through [`.github/workflows/deploy-pages.yml`](./.github/workflows/deploy-pages.yml). On each push to `master`, the workflow runs the current verification gate, builds a Pages-ready bundle, and deploys it to GitHub Pages. For this workflow to be the active deployment source, the repository Pages setting should be set to `GitHub Actions`.
