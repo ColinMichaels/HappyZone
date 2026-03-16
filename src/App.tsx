@@ -11,6 +11,7 @@ import {
     loadDisclaimerAcknowledged,
     loadSupportPreference,
     loadTheme,
+    mergeCheckInEntry,
     resolveFocusFromMood,
     saveCheckIns,
     saveDisclaimerAcknowledged,
@@ -154,6 +155,17 @@ export default function App() {
         }
     }
 
+    function resetDraft(nextStatus: FormStatus = emptyStatus) {
+        setSelectedMood(null);
+        setSelectedFocus(null);
+        setHasManualFocusSelection(false);
+        setNote('');
+        setIsSupportModalOpen(false);
+        setIsThoughtReframerOpen(false);
+        setStatus(nextStatus);
+        setStep('mood');
+    }
+
     function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
 
@@ -180,30 +192,22 @@ export default function App() {
             createdAt: new Date().toISOString()
         };
 
-        const nextEntries = [entry, ...checkIns].slice(0, STORED_CHECKIN_LIMIT);
-        setCheckIns(nextEntries);
-        setActiveEntry(entry);
-        saveCheckIns(nextEntries);
-        setStatus({
-            message: crisis
-                ? 'Plan created. Urgent support resources are shown above the reflection.'
-                : 'Gentle action plan created and saved locally.',
-            state: crisis ? 'info' : 'success'
-        });
+        const result = mergeCheckInEntry(checkIns, entry);
+        setCheckIns(result.entries);
+        setActiveEntry(result.activeEntry);
+
+        if (!result.isDuplicate) {
+            saveCheckIns(result.entries);
+        }
+
+        resetDraft();
     }
 
     function clearForm() {
-        setSelectedMood(null);
-        setSelectedFocus(null);
-        setHasManualFocusSelection(false);
-        setNote('');
-        setIsSupportModalOpen(false);
-        setIsThoughtReframerOpen(false);
-        setStatus({
+        resetDraft({
             message: 'Ready for a new check-in.',
             state: 'default'
         });
-        setStep('mood');
     }
 
     async function handlePersonalizedSupportChange(enabled: boolean) {

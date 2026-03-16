@@ -3,6 +3,7 @@ import {
     buildSupportRecommendation,
     detectSupportSignal,
     inferMood,
+    mergeCheckInEntry,
     trackSupportAnalytics
 } from './happyzone';
 
@@ -46,5 +47,29 @@ describe('happyzone logic', () => {
         const analytics = trackSupportAnalytics('modal-opened');
         expect(analytics.supportButtonOpened).toBe(1);
         expect(analytics.lastOpenedAt).not.toBeNull();
+    });
+
+    it('does not add a duplicate when the newest saved entry matches the current draft exactly', () => {
+        const existingEntry = {
+            id: 'entry-1',
+            mood: 'anxious' as const,
+            focus: 'calm' as const,
+            note: 'I am worried about everything and need to slow down.',
+            summary: 'I am worried about everything and need to slow down.',
+            crisis: false,
+            createdAt: '2026-03-16T10:00:00.000Z'
+        };
+
+        const duplicateAttempt = {
+            ...existingEntry,
+            id: 'entry-2',
+            createdAt: '2026-03-16T10:01:00.000Z'
+        };
+
+        expect(mergeCheckInEntry([existingEntry], duplicateAttempt)).toEqual({
+            entries: [existingEntry],
+            activeEntry: existingEntry,
+            isDuplicate: true
+        });
     });
 });

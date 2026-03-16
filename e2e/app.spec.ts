@@ -29,6 +29,8 @@ test('generates a gentle action plan through the main flow', async ({ page }) =>
     await page.getByRole('button', { name: /generate plan/i }).click();
 
     await expect(page.getByText(/this may be catastrophizing/i)).toBeVisible();
+    await expect(page.getByRole('heading', { name: /^mood$/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /generate plan/i })).toHaveCount(0);
 });
 
 test('shows the support modal for higher-risk journal language', async ({ page }) => {
@@ -69,7 +71,9 @@ test('persists saved check-ins and mood insights after a reload', async ({ page 
     await page.getByLabel(/what is happening right now/i).fill(journalNote);
     await page.getByRole('button', { name: /generate plan/i }).click();
 
-    await expect(page.getByText(/gentle action plan created and saved locally/i)).toBeVisible();
+    await expect(page.getByRole('heading', { name: /three short lines/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /^mood$/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /generate plan/i })).toHaveCount(0);
 
     await page.reload();
 

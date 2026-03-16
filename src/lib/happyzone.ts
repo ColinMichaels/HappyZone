@@ -152,6 +152,33 @@ export function saveCheckIns(entries: CheckInEntry[]): void {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(entries.slice(0, STORED_CHECKIN_LIMIT)));
 }
 
+export function mergeCheckInEntry(entries: CheckInEntry[], entry: CheckInEntry): {
+    entries: CheckInEntry[];
+    activeEntry: CheckInEntry;
+    isDuplicate: boolean;
+} {
+    const latestEntry = entries[0];
+
+    if (
+        latestEntry &&
+        latestEntry.note === entry.note &&
+        latestEntry.mood === entry.mood &&
+        latestEntry.focus === entry.focus
+    ) {
+        return {
+            entries,
+            activeEntry: latestEntry,
+            isDuplicate: true
+        };
+    }
+
+    return {
+        entries: [entry, ...entries].slice(0, STORED_CHECKIN_LIMIT),
+        activeEntry: entry,
+        isDuplicate: false
+    };
+}
+
 export function loadTheme(): ThemeMode {
     try {
         const savedTheme = window.localStorage.getItem(THEME_KEY);

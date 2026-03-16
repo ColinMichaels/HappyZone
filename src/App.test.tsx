@@ -2,6 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import App from './App';
+import { loadCheckIns } from './lib/happyzone';
 
 async function moveToJournalStep(user: ReturnType<typeof userEvent.setup>) {
     await user.click(screen.getByRole('button', { name: /i understand/i }));
@@ -23,8 +24,11 @@ describe('App regression coverage', () => {
 
         await user.click(screen.getByRole('button', { name: /generate plan/i }));
 
-        expect(await screen.findByText(/gentle action plan created and saved locally/i)).toBeInTheDocument();
+        expect(await screen.findByRole('heading', { name: /three short lines/i })).toBeInTheDocument();
         expect(screen.getByText(/this may be catastrophizing/i)).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: /^mood$/i })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /generate plan/i })).not.toBeInTheDocument();
+        expect(loadCheckIns()).toHaveLength(1);
     });
 
     it('shows the support guardrail when the journal text looks riskier', async () => {
