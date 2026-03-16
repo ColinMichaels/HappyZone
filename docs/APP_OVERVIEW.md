@@ -83,6 +83,16 @@ That runs:
 
 The Playwright suite currently covers desktop Chromium and mobile Chromium emulation.
 
+## Deployment
+
+The repo now includes a dedicated GitHub Pages deployment workflow:
+
+- pushes to `master` trigger `.github/workflows/deploy-pages.yml`
+- the Pages build uses the repository base path (`/HappyZone/`)
+- the app remains deployable as a static site
+
+There is also a `gh-pages` package install and a manual `npm run deploy` script available as a local fallback.
+
 ## Current Limits
 
 - No backend or cloud sync
