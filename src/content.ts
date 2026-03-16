@@ -1,4 +1,4 @@
-import type { FocusContent, MoodContent, MoodKey, RitualAction, SupportFocus } from './types';
+import type { FocusContent, MoodContent, MoodKey, RitualAction, SupportFocus, SupportResource } from './types';
 
 export const BREATHING_STEPS = [
     { label: 'Inhale', seconds: 4, scale: '1.16' },
@@ -194,6 +194,55 @@ export const crisisPatterns = [
     /want to die/i,
     /can't go on/i,
     /hurt someone/i
+];
+
+export const supportSignalPatterns = [
+    /hurt myself/i,
+    /hopeless/i,
+    /can't go on/i,
+    /want to disappear/i,
+    /no point/i,
+    /trapped/i,
+    /self harm/i,
+    /harm myself/i,
+    /end it/i,
+    /do not want to be here/i,
+    /nobody would care/i
+];
+
+export const supportResources: SupportResource[] = [
+    {
+        id: 'lifeline-call',
+        title: 'Call or text 988',
+        detail: 'For immediate emotional support in the U.S. and territories.',
+        actionLabel: 'Open 988',
+        href: 'tel:988',
+        kind: 'call'
+    },
+    {
+        id: 'emergency',
+        title: 'Call 911',
+        detail: 'Use this if there is immediate danger or you may act right now.',
+        actionLabel: 'Call 911',
+        href: 'tel:911',
+        kind: 'call'
+    },
+    {
+        id: 'crisis-text',
+        title: 'Text 741741',
+        detail: 'Text HOME to connect with a trained crisis counselor in the U.S.',
+        actionLabel: 'Text HOME',
+        href: 'sms:741741?body=HOME',
+        kind: 'text'
+    },
+    {
+        id: 'safety-plan',
+        title: 'Open the safety plan template',
+        detail: 'A local template to help you name warning signs, coping steps, and people to contact.',
+        actionLabel: 'Open template',
+        href: '/safety-plan-template.html',
+        kind: 'link'
+    }
 ];
 
 export const promptDeck = [

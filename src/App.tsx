@@ -1,7 +1,24 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { focusContent, moodContent, promptDeck, ritualActions, writingPrompts } from './content';
-import { applyTheme, detectCrisis, HISTORY_LIMIT, inferMood, loadCheckIns, loadTheme, resolveFocusFromMood, saveCheckIns, summarizeNote } from './lib/happyzone';
+import {
+    applyTheme,
+    buildSupportRecommendation,
+    detectCrisis,
+    detectSupportSignal,
+    inferMood,
+    loadCheckIns,
+    loadDisclaimerAcknowledged,
+    loadSupportPreference,
+    loadTheme,
+    resolveFocusFromMood,
+    saveCheckIns,
+    saveDisclaimerAcknowledged,
+    saveSupportPreference,
+    STORED_CHECKIN_LIMIT,
+    summarizeNote,
+    trackSupportAnalytics
+} from './lib/happyzone';
 import type { CheckInEntry, MoodKey, StatusState, SupportFocus, ThemeMode, WizardStep } from './types';
 import { ChoiceGrid } from './components/ChoiceGrid';
 import { Header } from './components/Header';
@@ -9,6 +26,9 @@ import { HistoryPanel } from './components/HistoryPanel';
 import { JournalStep } from './components/JournalStep';
 import { LearnMoreFooter } from './components/LearnMoreFooter';
 import { PlanOutput } from './components/PlanOutput';
+import { DisclaimerModal } from './components/DisclaimerModal';
+import { SupportModal } from './components/SupportModal';
+import { ThoughtReframerModal } from './components/ThoughtReframerModal';
 
 interface FormStatus {
     message: string;
@@ -33,6 +53,10 @@ export default function App() {
         const entries = loadCheckIns();
         return entries[0] ?? null;
     });
+    const [isDisclaimerOpen, setIsDisclaimerOpen] = useState<boolean>(() => !loadDisclaimerAcknowledged());
+    const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
+    const [isThoughtReframerOpen, setIsThoughtReframerOpen] = useState(false);
+    const [personalizedSupportRecommendations, setPersonalizedSupportRecommendations] = useState(false);
     const [promptIndex, setPromptIndex] = useState(() => new Date().getDate() % promptDeck.length);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -50,7 +74,27 @@ export default function App() {
         textarea.style.height = `${Math.min(textarea.scrollHeight, 440)}px`;
     }, [note, step]);
 
+    useEffect(() => {
+        let cancelled = false;
+
+        loadSupportPreference().then((preference) => {
+            if (!cancelled && preference) {
+                setPersonalizedSupportRecommendations(preference.personalizedRecommendations);
+            }
+        }).catch(() => {
+            // Keep the default opt-out state if local preference loading fails.
+        });
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
     const noteLength = note.trim().length;
+    const supportSignalDetected = noteLength > 0 && detectSupportSignal(note);
+    const supportRecommendation = personalizedSupportRecommendations
+        ? buildSupportRecommendation(note)
+        : null;
     const selectedMoodLabel = selectedMood ? moodContent[selectedMood].label : 'auto-detect';
     const selectedFocusLabel = selectedFocus ? focusContent[selectedFocus].label : 'choose later';
 
@@ -136,7 +180,7 @@ export default function App() {
             createdAt: new Date().toISOString()
         };
 
-        const nextEntries = [entry, ...checkIns].slice(0, HISTORY_LIMIT);
+        const nextEntries = [entry, ...checkIns].slice(0, STORED_CHECKIN_LIMIT);
         setCheckIns(nextEntries);
         setActiveEntry(entry);
         saveCheckIns(nextEntries);
@@ -153,11 +197,33 @@ export default function App() {
         setSelectedFocus(null);
         setHasManualFocusSelection(false);
         setNote('');
+        setIsSupportModalOpen(false);
+        setIsThoughtReframerOpen(false);
         setStatus({
             message: 'Ready for a new check-in.',
             state: 'default'
         });
         setStep('mood');
+    }
+
+    async function handlePersonalizedSupportChange(enabled: boolean) {
+        setPersonalizedSupportRecommendations(enabled);
+
+        try {
+            await saveSupportPreference({
+                personalizedRecommendations: enabled,
+                updatedAt: new Date().toISOString()
+            });
+
+            if (enabled) {
+                trackSupportAnalytics('opt-in-enabled');
+            }
+        } catch {
+            setStatus({
+                message: 'Support preference could not be saved. The current choice will apply for this session.',
+                state: 'info'
+            });
+        }
     }
 
     return (
@@ -247,6 +313,7 @@ export default function App() {
                                 onShufflePrompt={() => setPromptIndex((current) => (current + 1) % promptDeck.length)}
                                 onApplyPrompt={appendSeed}
                                 onApplyRitual={(ritual) => handleApplyRitual(ritual.focus, ritual.noteSeed, ritual.title)}
+                                onOpenThoughtReframer={() => setIsThoughtReframerOpen(true)}
                             />
                         ) : null}
 
@@ -261,6 +328,21 @@ export default function App() {
                                     </p>
                                 </div>
                                 <div className="flex shrink-0 items-center gap-3">
+                                    {supportSignalDetected ? (
+                                        <button
+                                            className="support-trigger-button"
+                                            aria-controls="supportModal"
+                                            aria-expanded={isSupportModalOpen}
+                                            aria-haspopup="dialog"
+                                            onClick={() => {
+                                                setIsSupportModalOpen(true);
+                                                trackSupportAnalytics('modal-opened');
+                                            }}
+                                            type="button"
+                                        >
+                                            Get support
+                                        </button>
+                                    ) : null}
                                     <button className="halo-button-primary" disabled={noteLength < 12} type="submit">Generate plan</button>
                                     <button className="halo-button-secondary" onClick={clearForm} type="button">Clear</button>
                                 </div>
@@ -283,6 +365,37 @@ export default function App() {
                 </main>
 
                 <LearnMoreFooter />
+
+                <DisclaimerModal
+                    isOpen={isDisclaimerOpen}
+                    onAcknowledge={() => {
+                        saveDisclaimerAcknowledged();
+                        setIsDisclaimerOpen(false);
+                    }}
+                />
+
+                <SupportModal
+                    isOpen={isSupportModalOpen}
+                    personalizedRecommendations={personalizedSupportRecommendations}
+                    recommendation={supportRecommendation}
+                    onClose={() => setIsSupportModalOpen(false)}
+                    onPersonalizedChange={handlePersonalizedSupportChange}
+                />
+
+                <ThoughtReframerModal
+                    isOpen={isThoughtReframerOpen}
+                    onClose={() => setIsThoughtReframerOpen(false)}
+                    onApplyBalancedTruth={(value) => {
+                        const prefix = 'Balanced truth: ';
+                        setNote((current) => current.trim() ? `${current}\n\n${prefix}${value}` : `${prefix}${value}`);
+                        setStatus({
+                            message: 'Balanced thought added to your journal.',
+                            state: 'info'
+                        });
+                        setIsThoughtReframerOpen(false);
+                        focusJournalSoon();
+                    }}
+                />
             </div>
         </div>
     );

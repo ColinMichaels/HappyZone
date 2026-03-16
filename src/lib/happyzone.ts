@@ -1,9 +1,26 @@
-import { crisisPatterns, defaultFocusByMood, focusContent, moodContent, moodKeywords } from '../content';
-import type { BuiltPlan, CheckInEntry, MoodKey, SupportFocus, ThemeMode } from '../types';
+import { crisisPatterns, defaultFocusByMood, focusContent, moodContent, moodKeywords, supportSignalPatterns } from '../content';
+import type { BuiltPlan, CheckInEntry, MoodKey, SupportAnalytics, SupportFocus, SupportPreference, SupportRecommendation, ThemeMode } from '../types';
 
 const STORAGE_KEY = 'happyzone.checkins.v2';
 const THEME_KEY = 'happyzone.theme.v1';
-export const HISTORY_LIMIT = 6;
+const SUPPORT_ANALYTICS_KEY = 'happyzone.support.analytics.v1';
+const SUPPORT_PREFERENCE_KEY = 'happyzone.support.preference.v1';
+const DISCLAIMER_ACK_KEY = 'happyzone.disclaimer.ack.v1';
+export const STORED_CHECKIN_LIMIT = 42;
+export const RECENT_CHECKIN_PREVIEW_LIMIT = 6;
+
+const SUPPORT_PREFERENCE_SECRET = 'happyzone-support-pref-v1';
+const SUPPORT_PREFERENCE_SALT = 'happyzone-support-pref-salt';
+const encoder = new TextEncoder();
+const decoder = new TextDecoder();
+
+const defaultSupportAnalytics: SupportAnalytics = {
+    supportButtonOpened: 0,
+    supportResourcesUsed: 0,
+    safetyPlanOpened: 0,
+    personalizedRecommendationOptIns: 0,
+    lastOpenedAt: null
+};
 
 const validationByMood: Record<MoodKey, string> = {
     overwhelmed: 'It sounds like you are carrying a lot right now.',
@@ -125,14 +142,14 @@ export function loadCheckIns(): CheckInEntry[] {
             }];
         });
 
-        return normalized.slice(0, HISTORY_LIMIT);
+        return normalized.slice(0, STORED_CHECKIN_LIMIT);
     } catch {
         return [];
     }
 }
 
 export function saveCheckIns(entries: CheckInEntry[]): void {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(entries.slice(0, HISTORY_LIMIT)));
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(entries.slice(0, STORED_CHECKIN_LIMIT)));
 }
 
 export function loadTheme(): ThemeMode {
@@ -146,6 +163,22 @@ export function loadTheme(): ThemeMode {
     }
 
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+export function loadDisclaimerAcknowledged(): boolean {
+    try {
+        return window.localStorage.getItem(DISCLAIMER_ACK_KEY) === 'true';
+    } catch {
+        return false;
+    }
+}
+
+export function saveDisclaimerAcknowledged(): void {
+    try {
+        window.localStorage.setItem(DISCLAIMER_ACK_KEY, 'true');
+    } catch {
+        // Keep the session functional even if localStorage is unavailable.
+    }
 }
 
 export function applyTheme(theme: ThemeMode): void {
@@ -181,6 +214,10 @@ export function detectCrisis(note: string): boolean {
     return crisisPatterns.some((pattern) => pattern.test(note));
 }
 
+export function detectSupportSignal(note: string): boolean {
+    return detectCrisis(note) || supportSignalPatterns.some((pattern) => pattern.test(note));
+}
+
 export function summarizeNote(note: string): string {
     const cleaned = note.replace(/\s+/g, ' ').trim();
     if (cleaned.length <= 90) {
@@ -207,6 +244,189 @@ export function formatRelativeTime(timestamp: string): string {
 
     const days = Math.round(hours / 24);
     return `${days} day${days === 1 ? '' : 's'} ago`;
+}
+
+function toBase64(bytes: Uint8Array): string {
+    let output = '';
+
+    bytes.forEach((byte) => {
+        output += String.fromCharCode(byte);
+    });
+
+    return btoa(output);
+}
+
+function fromBase64(value: string): ArrayBuffer {
+    const decoded = atob(value);
+    return Uint8Array.from(decoded, (character) => character.charCodeAt(0)).buffer;
+}
+
+async function getSupportPreferenceKey(): Promise<CryptoKey> {
+    const keyMaterial = await window.crypto.subtle.importKey(
+        'raw',
+        encoder.encode(`${window.location.origin}:${SUPPORT_PREFERENCE_SECRET}`),
+        'PBKDF2',
+        false,
+        ['deriveKey']
+    );
+
+    return window.crypto.subtle.deriveKey(
+        {
+            name: 'PBKDF2',
+            salt: encoder.encode(SUPPORT_PREFERENCE_SALT),
+            iterations: 100_000,
+            hash: 'SHA-256'
+        },
+        keyMaterial,
+        {
+            name: 'AES-GCM',
+            length: 256
+        },
+        false,
+        ['encrypt', 'decrypt']
+    );
+}
+
+export async function loadSupportPreference(): Promise<SupportPreference | null> {
+    try {
+        const raw = window.localStorage.getItem(SUPPORT_PREFERENCE_KEY);
+        if (!raw) {
+            return null;
+        }
+
+        const parsed = JSON.parse(raw) as { iv?: string; cipherText?: string };
+        if (typeof parsed.iv !== 'string' || typeof parsed.cipherText !== 'string') {
+            return null;
+        }
+
+        const key = await getSupportPreferenceKey();
+        const decrypted = await window.crypto.subtle.decrypt(
+            {
+                name: 'AES-GCM',
+                iv: fromBase64(parsed.iv)
+            },
+            key,
+            fromBase64(parsed.cipherText)
+        );
+
+        const parsedPreference = JSON.parse(decoder.decode(decrypted)) as Partial<SupportPreference>;
+        if (
+            typeof parsedPreference.personalizedRecommendations !== 'boolean' ||
+            typeof parsedPreference.updatedAt !== 'string'
+        ) {
+            return null;
+        }
+
+        return {
+            personalizedRecommendations: parsedPreference.personalizedRecommendations,
+            updatedAt: parsedPreference.updatedAt
+        };
+    } catch {
+        return null;
+    }
+}
+
+export async function saveSupportPreference(preference: SupportPreference): Promise<void> {
+    const key = await getSupportPreferenceKey();
+    const iv = window.crypto.getRandomValues(new Uint8Array(12));
+    const encrypted = await window.crypto.subtle.encrypt(
+        {
+            name: 'AES-GCM',
+            iv
+        },
+        key,
+        encoder.encode(JSON.stringify(preference))
+    );
+
+    window.localStorage.setItem(SUPPORT_PREFERENCE_KEY, JSON.stringify({
+        iv: toBase64(iv),
+        cipherText: toBase64(new Uint8Array(encrypted))
+    }));
+}
+
+export function loadSupportAnalytics(): SupportAnalytics {
+    try {
+        const raw = window.localStorage.getItem(SUPPORT_ANALYTICS_KEY);
+        if (!raw) {
+            return defaultSupportAnalytics;
+        }
+
+        const parsed = JSON.parse(raw) as Partial<SupportAnalytics>;
+        return {
+            supportButtonOpened: typeof parsed.supportButtonOpened === 'number' ? parsed.supportButtonOpened : 0,
+            supportResourcesUsed: typeof parsed.supportResourcesUsed === 'number' ? parsed.supportResourcesUsed : 0,
+            safetyPlanOpened: typeof parsed.safetyPlanOpened === 'number' ? parsed.safetyPlanOpened : 0,
+            personalizedRecommendationOptIns: typeof parsed.personalizedRecommendationOptIns === 'number' ? parsed.personalizedRecommendationOptIns : 0,
+            lastOpenedAt: typeof parsed.lastOpenedAt === 'string' ? parsed.lastOpenedAt : null
+        };
+    } catch {
+        return defaultSupportAnalytics;
+    }
+}
+
+export function trackSupportAnalytics(event: 'modal-opened' | 'resource-used' | 'safety-plan-opened' | 'opt-in-enabled'): SupportAnalytics {
+    const current = loadSupportAnalytics();
+    const next: SupportAnalytics = {
+        ...current,
+        lastOpenedAt: event === 'modal-opened' ? new Date().toISOString() : current.lastOpenedAt
+    };
+
+    if (event === 'modal-opened') {
+        next.supportButtonOpened += 1;
+    }
+
+    if (event === 'resource-used') {
+        next.supportResourcesUsed += 1;
+    }
+
+    if (event === 'safety-plan-opened') {
+        next.safetyPlanOpened += 1;
+    }
+
+    if (event === 'opt-in-enabled') {
+        next.personalizedRecommendationOptIns += 1;
+    }
+
+    window.localStorage.setItem(SUPPORT_ANALYTICS_KEY, JSON.stringify(next));
+    return next;
+}
+
+export function buildSupportRecommendation(note: string): SupportRecommendation | null {
+    const lowered = note.toLowerCase();
+
+    if (/(hurt myself|harm myself|self harm|kill myself|suicid|end my life)/i.test(note)) {
+        return {
+            title: 'Start with live help now',
+            detail: 'The safest next move is contacting live support instead of staying alone with this.',
+            resourceId: 'lifeline-call'
+        };
+    }
+
+    if (/(hopeless|can't go on|want to disappear|no point|do not want to be here|trapped)/i.test(note)) {
+        return {
+            title: 'Open the safety plan first',
+            detail: 'Use the template to name warning signs, one coping step, and one person you can contact next.',
+            resourceId: 'safety-plan'
+        };
+    }
+
+    if (/(panic|panicked|overwhelmed|spiral|scared|afraid)/i.test(lowered)) {
+        return {
+            title: 'Text support if calling feels like too much',
+            detail: 'Starting with a text can lower friction when the body is activated.',
+            resourceId: 'crisis-text'
+        };
+    }
+
+    if (/(alone|lonely|isolated|nobody|no one)/i.test(lowered)) {
+        return {
+            title: 'Use the safety plan to identify one person',
+            detail: 'The template can help you choose one contact before the feeling gets louder.',
+            resourceId: 'safety-plan'
+        };
+    }
+
+    return null;
 }
 
 function detectDistortion(note: string): string {

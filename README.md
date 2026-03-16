@@ -35,6 +35,36 @@ npm run preview
 npm run typecheck
 ```
 
+## Testing
+
+Unit and component regression tests:
+
+```bash
+npm test
+```
+
+Watch mode while building features:
+
+```bash
+npm run test:watch
+```
+
+Browser checks with Playwright:
+
+```bash
+npm run test:e2e
+```
+
+This suite runs the main flows in desktop Chromium and mobile Chromium emulation, including reload checks for locally persisted theme and saved check-ins.
+
+Run the full local gate:
+
+```bash
+npm run test:ci
+```
+
+The browser tests stay local to the machine running them. The CI workflow in `.github/workflows/ci.yml` runs type checking, Vitest, and Playwright on every push and pull request.
+
 ## Deployment
 
 Deploy the contents of `dist/` to any static host. No runtime server is required after build.

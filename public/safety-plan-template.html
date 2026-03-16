@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HappyZone Safety Plan Template</title>
+    <style>
+        :root {
+            color-scheme: light dark;
+            --bg: #f7f8f5;
+            --panel: #ffffff;
+            --soft: #eef2ec;
+            --text: #1e2830;
+            --muted: #4d5b63;
+            --border: #d7e0e6;
+            --accent: #5163c9;
+            --accent-soft: #e7ebff;
+            --radius: 24px;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #101417;
+                --panel: #151b20;
+                --soft: #1b2329;
+                --text: #f2f6f8;
+                --muted: #b4c0c8;
+                --border: #2a343c;
+                --accent: #a9b7ff;
+                --accent-soft: #1d264b;
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font: 16px/1.65 "Inter", "Manrope", system-ui, sans-serif;
+        }
+
+        main {
+            max-width: 48rem;
+            margin: 0 auto;
+            padding: 1.25rem;
+        }
+
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.25rem;
+            margin-top: 1rem;
+        }
+
+        h1,
+        h2 {
+            margin: 0;
+            font-family: "Manrope", "Inter", system-ui, sans-serif;
+            line-height: 1.2;
+        }
+
+        h1 {
+            font-size: clamp(1.5rem, 5vw, 2rem);
+        }
+
+        h2 {
+            font-size: 1.1rem;
+        }
+
+        p {
+            margin: 0.75rem 0 0;
+            color: var(--muted);
+        }
+
+        ol {
+            margin: 1rem 0 0;
+            padding-left: 1.25rem;
+        }
+
+        li + li {
+            margin-top: 1rem;
+        }
+
+        .blank {
+            display: block;
+            margin-top: 0.5rem;
+            min-height: 2.75rem;
+            border-radius: 16px;
+            border: 1px dashed var(--border);
+            background: var(--soft);
+            padding: 0.75rem;
+        }
+
+        .tip {
+            background: var(--accent-soft);
+            color: var(--text);
+        }
+
+        a {
+            color: var(--accent);
+        }
+    </style>
+</head>
+<body>
+<main>
+    <section class="panel">
+        <h1>Safety Plan Template</h1>
+        <p>Use this page to name your warning signs, your first coping steps, and the people or places that help you stay safer. This page is static and does not auto-save.</p>
+    </section>
+
+    <section class="panel tip">
+        <h2>How to use it</h2>
+        <p>Keep this practical. One short line in each section is enough. If you are in immediate danger, call 911 or call or text 988 now.</p>
+    </section>
+
+    <section class="panel">
+        <ol>
+            <li>
+                Warning signs I notice first
+                <span class="blank"></span>
+            </li>
+            <li>
+                One thing I can do on my own for the next 10 minutes
+                <span class="blank"></span>
+            </li>
+            <li>
+                A place or activity that lowers the intensity a little
+                <span class="blank"></span>
+            </li>
+            <li>
+                One person I can contact right away
+                <span class="blank"></span>
+            </li>
+            <li>
+                Numbers I want in reach
+                <span class="blank">988 Lifeline, 911, trusted contact:</span>
+            </li>
+            <li>
+                One step to make the space safer right now
+                <span class="blank"></span>
+            </li>
+        </ol>
+    </section>
+
+    <section class="panel">
+        <h2>Keep it easy to find</h2>
+        <p>Bookmark this page, print it, or copy the sections into a note you can reach quickly when thinking is harder.</p>
+        <p><a href="/">Back to HappyZone</a></p>
+    </section>
+</main>
+</body>
+</html>

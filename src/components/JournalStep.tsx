@@ -17,6 +17,7 @@ interface JournalStepProps {
     onShufflePrompt: () => void;
     onApplyPrompt: (prompt: string) => void;
     onApplyRitual: (ritual: RitualAction) => void;
+    onOpenThoughtReframer: () => void;
 }
 
 export function JournalStep({
@@ -33,7 +34,8 @@ export function JournalStep({
     onNoteChange,
     onShufflePrompt,
     onApplyPrompt,
-    onApplyRitual
+    onApplyRitual,
+    onOpenThoughtReframer
 }: JournalStepProps) {
     return (
         <section className="halo-panel wizard-step px-5 py-5 sm:px-6">
@@ -103,7 +105,12 @@ export function JournalStep({
             </details>
 
             <div className="mt-5">
-                <label htmlFor="journalInput" className="halo-field-label">What is happening right now?</label>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <label htmlFor="journalInput" className="halo-field-label">What is happening right now?</label>
+                    <button className="thought-reframer-trigger" onClick={onOpenThoughtReframer} type="button">
+                        Help me reframe this thought.
+                    </button>
+                </div>
                 <textarea
                     id="journalInput"
                     ref={textareaRef}

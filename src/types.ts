@@ -43,3 +43,31 @@ export interface BuiltPlan {
     reframe: string;
     microAction: string;
 }
+
+export interface SupportResource {
+    id: string;
+    title: string;
+    detail: string;
+    actionLabel: string;
+    href: string;
+    kind: 'call' | 'text' | 'link';
+}
+
+export interface SupportRecommendation {
+    title: string;
+    detail: string;
+    resourceId: string;
+}
+
+export interface SupportPreference {
+    personalizedRecommendations: boolean;
+    updatedAt: string;
+}
+
+export interface SupportAnalytics {
+    supportButtonOpened: number;
+    supportResourcesUsed: number;
+    safetyPlanOpened: number;
+    personalizedRecommendationOptIns: number;
+    lastOpenedAt: string | null;
+}
