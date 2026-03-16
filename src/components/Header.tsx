@@ -1,4 +1,5 @@
 import type { ThemeMode } from '../types';
+import { utilityIcons } from '../lib/materialIcons';
 
 interface HeaderProps {
     theme: ThemeMode;
@@ -6,6 +7,10 @@ interface HeaderProps {
 }
 
 export function Header({ theme, onThemeChange }: HeaderProps) {
+    const LightIcon = utilityIcons.light;
+    const DarkIcon = utilityIcons.dark;
+    const InfoIcon = utilityIcons.info;
+
     return (
         <header className="halo-panel halo-hero halo-topbar px-3 py-3 sm:px-4">
             <div className="flex items-start justify-between gap-3">
@@ -21,7 +26,7 @@ export function Header({ theme, onThemeChange }: HeaderProps) {
                             onClick={() => onThemeChange('light')}
                             type="button"
                         >
-                            Light
+                            <LightIcon className="theme-toggle-icon" aria-hidden="true" />
                         </button>
                         <button
                             className="theme-toggle"
@@ -31,11 +36,13 @@ export function Header({ theme, onThemeChange }: HeaderProps) {
                             onClick={() => onThemeChange('dark')}
                             type="button"
                         >
-                            Dark
+                            <DarkIcon className="theme-toggle-icon" aria-hidden="true" />
                         </button>
                     </div>
 
-                    <a className="halo-icon-link" href="#learnMorePanel" aria-label="Open How this works">i</a>
+                    <a className="halo-icon-link" href="#learnMorePanel" aria-label="Open How this works">
+                        <InfoIcon className="utility-icon" aria-hidden="true" />
+                    </a>
                 </div>
             </div>
 

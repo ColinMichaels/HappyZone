@@ -47,6 +47,16 @@ test('shows the support modal for higher-risk journal language', async ({ page }
     await expect(page.getByRole('dialog', { name: /immediate support resources/i })).toBeVisible();
     await expect(page.getByText(/call or text 988/i)).toBeVisible();
     await expect(page.getByText(/open the safety plan template/i)).toBeVisible();
+    await expect(page.getByRole('link', { name: /open the safety plan template/i })).toHaveAttribute('href', /safety-plan-template\.html$/);
+});
+
+test('shows the safety plan link in the urgent support section after a crisis check-in', async ({ page }) => {
+    await moveToJournal(page);
+    await page.getByLabel(/what is happening right now/i).fill('I feel hopeless and want to hurt myself.');
+    await page.getByRole('button', { name: /generate plan/i }).click();
+
+    await expect(page.getByText(/this sounds more urgent than a normal check-in/i)).toBeVisible();
+    await expect(page.getByRole('link', { name: /open the safety plan template/i })).toHaveAttribute('href', /safety-plan-template\.html$/);
 });
 
 test('lets a user work through the thought reframer and append the balanced truth', async ({ page }) => {

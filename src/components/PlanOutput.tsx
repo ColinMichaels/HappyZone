@@ -1,3 +1,4 @@
+import { supportResources } from '../content';
 import { buildPlan, formatRelativeTime } from '../lib/happyzone';
 import type { CheckInEntry } from '../types';
 
@@ -24,6 +25,7 @@ export function PlanOutput({ entry }: PlanOutputProps) {
     }
 
     const plan = buildPlan(entry.note, entry.mood, entry.crisis);
+    const safetyPlanResource = supportResources.find((resource) => resource.id === 'safety-plan') ?? null;
 
     return (
         <section className="halo-panel px-5 py-5 sm:px-6">
@@ -46,6 +48,16 @@ export function PlanOutput({ entry }: PlanOutputProps) {
                             <a className="halo-button-secondary no-underline" href="https://988lifeline.org/get-help/" target="_blank" rel="noreferrer">
                                 Open 988 support
                             </a>
+                            {safetyPlanResource ? (
+                                <a
+                                    className="halo-button-secondary no-underline"
+                                    href={safetyPlanResource.href}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                >
+                                    {safetyPlanResource.title}
+                                </a>
+                            ) : null}
                         </div>
                     </div>
                 ) : null}

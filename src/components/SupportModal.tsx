@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 
 import { supportResources } from '../content';
 import { trackSupportAnalytics } from '../lib/happyzone';
+import { getSupportResourceIcon } from '../lib/materialIcons';
 import type { SupportRecommendation } from '../types';
 
 interface SupportModalProps {
@@ -155,6 +156,7 @@ export function SupportModal({
                     <section className="support-resource-list" aria-label="Support resources">
                         {supportResources.map((resource) => {
                             const isRecommended = personalizedRecommendations && recommendation?.resourceId === resource.id;
+                            const ResourceIcon = getSupportResourceIcon(resource.id);
 
                             return (
                                 <a
@@ -172,12 +174,20 @@ export function SupportModal({
                                         }
                                     }}
                                 >
-                                    <div className="support-resource-copy">
-                                        <div className="support-resource-heading-row">
-                                            <h3 className="halo-card-title">{resource.title}</h3>
-                                            {isRecommended ? <span className="support-recommended-badge">Suggested</span> : null}
+                                    <div className="support-resource-leading">
+                                        {ResourceIcon ? (
+                                            <span className="summary-icon support-resource-icon" aria-hidden="true">
+                                                <ResourceIcon className="utility-icon" />
+                                            </span>
+                                        ) : null}
+
+                                        <div className="support-resource-copy">
+                                            <div className="support-resource-heading-row">
+                                                <h3 className="halo-card-title">{resource.title}</h3>
+                                                {isRecommended ? <span className="support-recommended-badge">Suggested</span> : null}
+                                            </div>
+                                            <p className="halo-body-copy mt-2">{resource.detail}</p>
                                         </div>
-                                        <p className="halo-body-copy mt-2">{resource.detail}</p>
                                     </div>
                                     <span className="halo-button-secondary">{resource.actionLabel}</span>
                                 </a>

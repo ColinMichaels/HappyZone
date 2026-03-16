@@ -1,5 +1,7 @@
 import type { FocusContent, MoodContent, MoodKey, RitualAction, SupportFocus, SupportResource } from './types';
 
+const safetyPlanHref = `${import.meta.env.BASE_URL}safety-plan-template.html`;
+
 export const BREATHING_STEPS = [
     { label: 'Inhale', seconds: 4, scale: '1.16' },
     { label: 'Hold', seconds: 4, scale: '1.16' },
@@ -240,7 +242,7 @@ export const supportResources: SupportResource[] = [
         title: 'Open the safety plan template',
         detail: 'A local template to help you name warning signs, coping steps, and people to contact.',
         actionLabel: 'Open template',
-        href: '/safety-plan-template.html',
+        href: safetyPlanHref,
         kind: 'link'
     }
 ];

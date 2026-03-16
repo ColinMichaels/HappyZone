@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import { getToolIcon } from '../lib/materialIcons';
 import { BreathingReset } from './BreathingReset';
 import { GroundingGuide } from './GroundingGuide';
 
@@ -47,18 +48,29 @@ export function CalmingToolsPanel({ breathingInstruction, onOpenThoughtReframer 
                 </p>
 
                 <div className="tool-switcher" aria-label="Choose a calming tool">
-                    {tools.map((tool) => (
-                        <button
-                            key={tool.key}
-                            className="tool-switch"
-                            data-active={tool.key === activeTool}
-                            onClick={() => setActiveTool(tool.key)}
-                            type="button"
-                        >
-                            <span className="choice-title">{tool.label}</span>
-                            <span className="choice-copy">{tool.description}</span>
-                        </button>
-                    ))}
+                    {tools.map((tool) => {
+                        const ToolIcon = getToolIcon(tool.key);
+
+                        return (
+                            <button
+                                key={tool.key}
+                                className="tool-switch"
+                                data-active={tool.key === activeTool}
+                                onClick={() => setActiveTool(tool.key)}
+                                type="button"
+                            >
+                                <div className="choice-title-row">
+                                    {ToolIcon ? (
+                                        <span className="choice-icon-badge" aria-hidden="true">
+                                            <ToolIcon className="choice-icon" />
+                                        </span>
+                                    ) : null}
+                                    <span className="choice-title">{tool.label}</span>
+                                </div>
+                                <span className="choice-copy">{tool.description}</span>
+                            </button>
+                        );
+                    })}
                 </div>
 
                 {activeTool === 'breathing' ? <BreathingReset instruction={breathingInstruction} /> : null}
