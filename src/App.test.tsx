@@ -146,4 +146,39 @@ describe('App regression coverage', () => {
         expect(screen.getByRole('link', { name: /view calendar/i })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /open plan/i })).toBeInTheDocument();
     });
+
+    it('lets the user clear saved local journal and reminder data from the footer controls', async () => {
+        const user = userEvent.setup();
+
+        saveCheckIns([{
+            id: 'entry-1',
+            mood: 'steady',
+            focus: 'calm',
+            note: 'I want to keep building steadiness.',
+            summary: 'I want to keep building steadiness.',
+            crisis: false,
+            createdAt: '2020-01-02T10:00:00.000Z'
+        }]);
+        saveReminders([{
+            id: 'reminder-1',
+            checkInId: 'entry-1',
+            title: 'Check back in',
+            note: 'Review the calm plan.',
+            scheduledFor: '2020-01-03T09:00:00.000Z',
+            createdAt: '2020-01-02T10:05:00.000Z',
+            completedAt: null
+        }]);
+
+        render(<App />);
+
+        await user.click(screen.getByRole('button', { name: /i understand/i }));
+        await user.click(screen.getByRole('heading', { name: /designed for a calm mind/i }));
+        await user.click(screen.getByRole('button', { name: /reset saved data/i }));
+        await user.click(screen.getByRole('button', { name: /clear saved data/i }));
+
+        expect(await screen.findByText(/saved local data cleared from this browser/i)).toBeInTheDocument();
+        expect(loadCheckIns()).toEqual([]);
+        expect(loadReminders()).toEqual([]);
+        expect(screen.getByText(/your recent check-ins will appear here/i)).toBeInTheDocument();
+    });
 });

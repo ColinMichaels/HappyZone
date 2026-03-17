@@ -978,6 +978,12 @@ details[open] .learn-more-toggle {
     margin-top: 1rem;
 }
 
+.footer-action-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
 .calendar-toolbar {
     display: grid;
     grid-template-columns: auto 1fr auto;

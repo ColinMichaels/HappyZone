@@ -30,5 +30,8 @@ jobs:
       - name: Run unit and integration tests
         run: npm test
 
+      - name: Run production build
+        run: npm run build
+
       - name: Run end-to-end browser tests
         run: npm run test:e2e

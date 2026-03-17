@@ -44,7 +44,7 @@ npm run build
 - `npm run test:watch`: run Vitest in watch mode
 - `npm run test:e2e`: run Playwright browser tests
 - `npm run test:e2e:headed`: run Playwright in headed mode
-- `npm run test:ci`: run the full local verification gate
+- `npm run test:ci`: run the full local verification gate, including a production build
 - `npm run build:pages`: build with the GitHub Pages base path
 - `npm run deploy`: publish the current `dist/` folder with `gh-pages` as a manual fallback
 
@@ -65,6 +65,7 @@ The browser tests stay local to the machine running them. The CI workflow in `.g
 - Theme preference, disclaimer acknowledgement, support analytics, and support preference are also stored locally
 - Journal processing, support detection, and mood insights all happen in-browser
 - Calendar export is a manual one-way `.ics` file generated in the browser
+- A footer control can clear saved check-ins, reminders, visit snapshot data, and support-related local preferences from the current browser
 - No journal content is transmitted to a server
 
 ## Project Structure
@@ -88,3 +89,4 @@ The browser tests stay local to the machine running them. The CI workflow in `.g
 Deploy the contents of `dist/` to any static host. No runtime server is required after build.
 
 GitHub Pages is wired through [`.github/workflows/deploy-pages.yml`](./.github/workflows/deploy-pages.yml). On each push to `master`, the workflow runs the current verification gate, builds a Pages-ready bundle, and deploys it to GitHub Pages. For this workflow to be the active deployment source, the repository Pages setting should be set to `GitHub Actions`.
+If the live site ever requests `/src/main.tsx`, Pages is serving the repository source instead of the built bundle; switch the Pages source back to `GitHub Actions` and rerun the deploy workflow.

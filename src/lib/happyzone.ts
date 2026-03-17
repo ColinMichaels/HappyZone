@@ -355,6 +355,20 @@ export function saveReminders(reminders: ReminderEntry[]): void {
     window.localStorage.setItem(REMINDER_STORAGE_KEY, JSON.stringify(sortReminders(reminders).slice(0, STORED_REMINDER_LIMIT)));
 }
 
+export function clearSavedLocalData(): void {
+    try {
+        [
+            CHECKIN_STORAGE_KEY,
+            REMINDER_STORAGE_KEY,
+            VISIT_SNAPSHOT_KEY,
+            SUPPORT_ANALYTICS_KEY,
+            SUPPORT_PREFERENCE_KEY
+        ].forEach((key) => window.localStorage.removeItem(key));
+    } catch {
+        // Ignore storage clearing failures so the UI can remain usable.
+    }
+}
+
 export function mergeCheckInEntry(entries: CheckInEntry[], entry: CheckInEntry): {
     entries: CheckInEntry[];
     activeEntry: CheckInEntry;
