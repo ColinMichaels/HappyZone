@@ -448,6 +448,7 @@ export default function App() {
                                     <button
                                         key={tab.view}
                                         id={`workspace-tab-${tab.view}`}
+                                        aria-label={tab.label}
                                         aria-controls={`workspace-panel-${tab.view}`}
                                         aria-selected={mobileView === tab.view}
                                         className="mobile-workspace-tab"

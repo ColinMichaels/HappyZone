@@ -1,4 +1,4 @@
-import { crisisPatterns, defaultFocusByMood, focusContent, moodContent, moodKeywords, supportSignalPatterns, validationByMood, microActionByMood, distortionRules } from '../content';
+import { crisisPatterns, defaultFocusByMood, focusContent, moodContent, moodKeywords, supportSignalPatterns } from '../content';
 import { BRAND_CONFIG } from '../brandConfig';
 import type {
     BuiltPlan,
