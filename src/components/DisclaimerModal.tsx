@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { supportResources } from '../content';
 import { trackSupportAnalytics } from '../lib/happyzone';
+import { BRAND_CONFIG } from '../brandConfig';
 
 interface DisclaimerModalProps {
     isOpen: boolean;
@@ -80,7 +81,7 @@ export function DisclaimerModal({ isOpen, onAcknowledge }: DisclaimerModalProps)
                     </div>
 
                     <p id="disclaimerModalDescription" className="halo-body-copy text-halo-text">
-                        HappyZone is a self-help tool for reflection and guidance. It is not a replacement for licensed therapy, medical advice, diagnosis, or treatment. If you need clinical support or you are in crisis, contact a licensed professional or local crisis service right away.
+                        {BRAND_CONFIG.disclaimer}
                     </p>
 
                     {showEmergencyInfo ? (

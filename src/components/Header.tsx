@@ -1,5 +1,6 @@
 import type { ThemeMode } from '../types';
 import { utilityIcons } from '../lib/materialIcons';
+import { BRAND_CONFIG } from '../brandConfig';
 
 interface HeaderProps {
     theme: ThemeMode;
@@ -16,12 +17,16 @@ export function Header({ theme, onThemeChange, minimal = false }: HeaderProps) {
         <header className="halo-panel halo-hero halo-topbar px-3 py-1.5 sm:px-4">
             <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 overflow-hidden">
-                    <p className="halo-brand-mark shrink-0">HappyZone</p>
+                    {BRAND_CONFIG.logoUrl ? (
+                        <img src={BRAND_CONFIG.logoUrl} alt={BRAND_CONFIG.name} className="h-6 w-auto shrink-0" />
+                    ) : (
+                        <p className="halo-brand-mark shrink-0">{BRAND_CONFIG.name}</p>
+                    )}
                     
                     {!minimal && (
                         <div className="hidden md:flex items-center gap-3 border-l border-halo-divider pl-3 ml-1 overflow-hidden">
-                            <h1 className="halo-hero-title text-lg whitespace-nowrap overflow-hidden text-ellipsis">Private Check-in</h1>
-                            <span className="halo-header-subtext hidden lg:inline border-l border-halo-divider pl-3 ml-1">Private by design.</span>
+                            <h1 className="halo-hero-title text-lg whitespace-nowrap overflow-hidden text-ellipsis">{BRAND_CONFIG.tagline}</h1>
+                            <span className="halo-header-subtext hidden lg:inline border-l border-halo-divider pl-3 ml-1">{BRAND_CONFIG.catchPhrase}</span>
                         </div>
                     )}
                 </div>

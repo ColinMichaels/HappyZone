@@ -43,6 +43,7 @@ import {
     trackSupportAnalytics
 } from './lib/happyzone';
 import { utilityIcons } from './lib/materialIcons';
+import { BRAND_CONFIG } from './brandConfig';
 import type { CheckInEntry, MoodKey, ReminderEntry, StatusState, SupportFocus, ThemeMode, WizardStep } from './types';
 
 interface FormStatus {
@@ -108,6 +109,10 @@ export default function App() {
     useEffect(() => {
         applyTheme(theme);
     }, [theme]);
+
+    useEffect(() => {
+        document.title = `${BRAND_CONFIG.name} | ${BRAND_CONFIG.tagline}`;
+    }, []);
 
     useEffect(() => {
         saveVisitSnapshot({

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { BRAND_CONFIG } from '../brandConfig';
 
 interface LearnMoreFooterProps {
     savedCheckInCount: number;
@@ -97,7 +98,7 @@ export function LearnMoreFooter({ savedCheckInCount, savedReminderCount, onClear
             </details>
 
             <p className="footer-disclaimer mt-3">
-                Disclaimer: HappyZone is a self-help tool designed for reflection and guidance; it is not a licensed medical or mental health service. This application should not be used as a substitute for professional medical advice, diagnosis, or treatment. If you are experiencing a mental health crisis, please reach out to a licensed professional or a local crisis center immediately.
+                Disclaimer: {BRAND_CONFIG.disclaimer}
             </p>
         </footer>
     );
