@@ -14,9 +14,9 @@ export function Header({ theme, onThemeChange, minimal = false }: HeaderProps) {
     const InfoIcon = utilityIcons.info;
 
     return (
-        <header className="halo-panel halo-hero halo-topbar px-3 py-1.5 sm:px-4">
-            <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3 overflow-hidden">
+        <header className="halo-panel halo-hero halo-topbar px-2 py-1 sm:px-3">
+            <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 overflow-hidden">
                     {BRAND_CONFIG.logoUrl ? (
                         <img src={BRAND_CONFIG.logoUrl} alt={BRAND_CONFIG.name} className="h-6 w-auto shrink-0" />
                     ) : (
