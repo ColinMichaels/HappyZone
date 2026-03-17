@@ -307,9 +307,7 @@ summary::-webkit-details-marker {
     background-image: var(--halo-gradient-hero);
 }
 
-.halo-topbar {
-    min-height: min(10svh, 5.5rem);
-}
+
 
 .app-frame {
     max-width: min(92rem, 100%);
