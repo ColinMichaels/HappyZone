@@ -38,6 +38,36 @@ export interface CheckInEntry {
     createdAt: string;
 }
 
+export interface ReminderEntry {
+    id: string;
+    checkInId: string;
+    title: string;
+    note: string;
+    scheduledFor: string;
+    createdAt: string;
+    completedAt: string | null;
+}
+
+export interface VisitSnapshot {
+    lastSeenAt: string | null;
+}
+
+export interface ProgressSummary {
+    headline: string;
+    detail: string;
+    entriesSinceLastVisit: number;
+    streakDays: number;
+    dominantMood: MoodKey | null;
+    lastEntryAt: string | null;
+    dueReminders: ReminderEntry[];
+    upcomingReminders: ReminderEntry[];
+}
+
+export interface CalendarExport {
+    filename: string;
+    content: string;
+}
+
 export interface BuiltPlan {
     validation: string;
     reframe: string;

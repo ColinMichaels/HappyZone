@@ -40,9 +40,12 @@ export function Header({ theme, onThemeChange }: HeaderProps) {
                         </button>
                     </div>
 
-                    <a className="halo-icon-link" href="#learnMorePanel" aria-label="Open How this works">
-                        <InfoIcon className="utility-icon" aria-hidden="true" />
-                    </a>
+                    <span className="icon-action">
+                        <a className="halo-icon-link" href="#learnMorePanel" aria-label="Open How this works">
+                            <InfoIcon className="utility-icon" aria-hidden="true" />
+                        </a>
+                        <span className="icon-action-tooltip" aria-hidden="true">How this works</span>
+                    </span>
                 </div>
             </div>
 
