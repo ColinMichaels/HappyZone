@@ -3,14 +3,8 @@ import '@testing-library/jest-dom/vitest';
 import { webcrypto } from 'node:crypto';
 import { afterEach, beforeEach, vi } from 'vitest';
 
-Object.defineProperty(globalThis, 'crypto', {
-    configurable: true,
-    value: webcrypto
-});
-
-Object.defineProperty(window, 'matchMedia', {
-    writable: true,
-    value: vi.fn().mockImplementation((query: string) => ({
+function defaultMatchMediaImplementation(query: string) {
+    return {
         matches: false,
         media: query,
         onchange: null,
@@ -19,7 +13,17 @@ Object.defineProperty(window, 'matchMedia', {
         addEventListener: vi.fn(),
         removeEventListener: vi.fn(),
         dispatchEvent: vi.fn()
-    }))
+    };
+}
+
+Object.defineProperty(globalThis, 'crypto', {
+    configurable: true,
+    value: webcrypto
+});
+
+Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: vi.fn().mockImplementation(defaultMatchMediaImplementation)
 });
 
 Object.defineProperty(window, 'requestAnimationFrame', {
@@ -40,6 +44,7 @@ Object.defineProperty(window.HTMLElement.prototype, 'scrollIntoView', {
 beforeEach(() => {
     window.localStorage.clear();
     document.documentElement.removeAttribute('data-theme');
+    vi.mocked(window.matchMedia).mockImplementation(defaultMatchMediaImplementation);
 });
 
 afterEach(() => {

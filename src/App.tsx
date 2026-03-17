@@ -31,6 +31,7 @@ import {
     loadVisitSnapshot,
     mergeCheckInEntry,
     mergeReminderEntry,
+    prefersReducedMotion,
     resolveFocusFromMood,
     saveCheckIns,
     saveDisclaimerAcknowledged,
@@ -165,7 +166,7 @@ export default function App() {
 
     function focusPlanSoon() {
         window.setTimeout(() => document.getElementById('planOutput')?.scrollIntoView({
-            behavior: 'smooth',
+            behavior: prefersReducedMotion() ? 'auto' : 'smooth',
             block: 'start'
         }), 0);
     }

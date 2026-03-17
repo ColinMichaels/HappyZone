@@ -7,7 +7,6 @@ This file tracks unfinished work and follow-up checks that are still worth doing
 - [ ] Run a manual screen-reader pass for the disclaimer modal, support modal, thought reframer, and calming tools disclosures.
 - [ ] Run manual mobile-device QA in Safari on iPhone and Chrome on Android for keyboard overlap, sticky controls, and disclosure spacing.
 - [ ] Run manual QA on delayed tooltips for icon-only controls to make sure hover/focus timing still feels discoverable without becoming noisy.
-- [ ] Add a reduced-motion verification pass for the breathing orb and any animated transitions.
 
 ## Product And Content
 

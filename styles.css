@@ -1515,6 +1515,11 @@ details[open] .learn-more-toggle {
         background-color var(--halo-duration-base) var(--halo-ease);
 }
 
+.halo-orb[data-reduced-motion="true"] {
+    transform: none;
+    transition: none;
+}
+
 #formStatus[data-state="error"] {
     color: var(--halo-danger);
 }
@@ -1654,5 +1659,9 @@ details[open] .learn-more-toggle {
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
         scroll-behavior: auto !important;
+    }
+
+    .halo-orb {
+        transform: none !important;
     }
 }

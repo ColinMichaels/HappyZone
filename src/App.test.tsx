@@ -1,7 +1,9 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { vi } from 'vitest';
 
 import App from './App';
+import { BreathingReset } from './components/BreathingReset';
 import { loadCheckIns, loadReminders, saveCheckIns, saveReminders, saveVisitSnapshot } from './lib/happyzone';
 
 async function moveToJournalStep(user: ReturnType<typeof userEvent.setup>) {
@@ -9,6 +11,19 @@ async function moveToJournalStep(user: ReturnType<typeof userEvent.setup>) {
     await user.click(screen.getByRole('radio', { name: /anxious/i }));
     await user.click(screen.getByRole('button', { name: /^next$/i }));
     await user.click(screen.getByRole('button', { name: /^next$/i }));
+}
+
+function setReducedMotionPreference(enabled: boolean) {
+    vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
+        matches: query === '(prefers-reduced-motion: reduce)' ? enabled : false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn()
+    }));
 }
 
 describe('App regression coverage', () => {
@@ -180,5 +195,34 @@ describe('App regression coverage', () => {
         expect(loadCheckIns()).toEqual([]);
         expect(loadReminders()).toEqual([]);
         expect(screen.getByText(/your recent check-ins will appear here/i)).toBeInTheDocument();
+    });
+
+    it('respects reduced-motion preferences when scrolling to the generated plan', async () => {
+        const user = userEvent.setup();
+
+        setReducedMotionPreference(true);
+        render(<App />);
+
+        await moveToJournalStep(user);
+        await user.type(
+            screen.getByLabelText(/what is happening right now/i),
+            'I want a short plan without animated scrolling getting in the way.'
+        );
+
+        await user.click(screen.getByRole('button', { name: /generate plan/i }));
+
+        await screen.findByRole('heading', { name: /three short lines/i });
+        await waitFor(() => expect(window.HTMLElement.prototype.scrollIntoView).toHaveBeenCalledWith({
+            behavior: 'auto',
+            block: 'start'
+        }));
+    });
+
+    it('keeps the breathing orb static when reduced motion is preferred', () => {
+        setReducedMotionPreference(true);
+        render(<BreathingReset instruction="Use the breath count only." />);
+
+        expect(screen.getByText(/motion reduced\. follow the timer and breath label without the orb expanding\./i)).toBeInTheDocument();
+        expect(document.querySelector('.halo-orb')).toHaveAttribute('data-reduced-motion', 'true');
     });
 });
