@@ -41,7 +41,7 @@ describe('App regression coverage', () => {
 
         expect(await screen.findByRole('heading', { name: /three short lines/i })).toBeInTheDocument();
         expect(screen.getByText(/this may be catastrophizing/i)).toBeInTheDocument();
-        expect(screen.getByRole('heading', { name: /^mood$/i })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: /how are you feeling/i })).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: /generate plan/i })).not.toBeInTheDocument();
         expect(loadCheckIns()).toHaveLength(1);
     });
@@ -121,7 +121,7 @@ describe('App regression coverage', () => {
         await user.type(within(dialog).getByRole('textbox'), 'This is hard, but I can take one next step.');
         await user.click(within(dialog).getByRole('button', { name: /add to journal/i }));
 
-        expect(screen.getByRole('heading', { name: /^journal$/i })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: /write it out/i })).toBeInTheDocument();
         expect(screen.getByLabelText(/what is happening right now/i)).toHaveValue(
             'Balanced truth: This is hard, but I can take one next step.'
         );
@@ -156,9 +156,7 @@ describe('App regression coverage', () => {
 
         await user.click(screen.getByRole('button', { name: /i understand/i }));
 
-        expect(screen.getByRole('heading', { name: /welcome back/i })).toBeInTheDocument();
-        expect(screen.getByText(/1 reminder ready to revisit/i)).toBeInTheDocument();
-        expect(screen.getByRole('link', { name: /view calendar/i })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: /1 reminder ready to revisit/i })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /open plan/i })).toBeInTheDocument();
     });
 
@@ -187,6 +185,12 @@ describe('App regression coverage', () => {
         render(<App />);
 
         await user.click(screen.getByRole('button', { name: /i understand/i }));
+
+        const planTab = screen.queryByRole('tab', { name: /plan/i, hidden: true });
+        if (planTab) {
+            await user.click(planTab);
+        }
+
         await user.click(screen.getByRole('heading', { name: /designed for a calm mind/i }));
         await user.click(screen.getByRole('button', { name: /reset saved data/i }));
         await user.click(screen.getByRole('button', { name: /clear saved data/i }));

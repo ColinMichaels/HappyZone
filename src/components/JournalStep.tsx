@@ -38,14 +38,10 @@ export function JournalStep({
     onOpenThoughtReframer
 }: JournalStepProps) {
     return (
-        <section className="halo-panel wizard-step px-5 py-5 sm:px-6">
+        <section className="halo-panel wizard-step px-4 py-4 sm:px-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                    <p className="halo-eyebrow">Step 3 of 3</p>
-                    <h2 className="halo-section-title mt-2">Journal</h2>
-                    <p className="halo-helper-text mt-2">
-                        Mood: {selectedMoodLabel}. Support: {selectedFocusLabel}.
-                    </p>
+                    <h2 className="halo-section-title mt-2">Write it out</h2>
                 </div>
                 <button className="halo-button-secondary" onClick={onBack} type="button">Back</button>
             </div>
@@ -128,8 +124,7 @@ export function JournalStep({
                 />
             </div>
 
-            <p className="halo-helper-text mt-3">Cmd/Ctrl + Enter also generates the plan.</p>
-            <p id="formStatus" className="text-sm leading-6 text-halo-muted" data-state={statusState !== 'default' ? statusState : undefined} aria-live="polite">
+            <p id="formStatus" className="mt-3 text-sm leading-6 text-halo-muted" data-state={statusState !== 'default' ? statusState : undefined} aria-live="polite">
                 {statusMessage}
             </p>
         </section>

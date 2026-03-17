@@ -45,15 +45,26 @@ async function moveToJournal(page: Page) {
     await page.getByRole('button', { name: /^next$/i }).click();
 }
 
+async function openWorkspaceTabIfVisible(page: Page, label: string) {
+    const tab = page.getByRole('tab', { name: new RegExp(`^${label}`, 'i') }).first();
+
+    if (await tab.isVisible()) {
+        await tab.click();
+    }
+}
+
 async function openRecentCheckIns(page: Page) {
+    await openWorkspaceTabIfVisible(page, 'History');
     await page.locator('details.halo-panel:has-text("Recent check-ins") > summary.learn-more-summary').click();
 }
 
 async function openMoodInsights(page: Page) {
+    await openWorkspaceTabIfVisible(page, 'History');
     await page.locator('details.halo-card:has-text("Mood insights") > summary.learn-more-summary').click();
 }
 
 async function openCalmingTools(page: Page) {
+    await openWorkspaceTabIfVisible(page, 'Tools');
     await page.locator('details.halo-panel:has-text("Calming tools") > summary.learn-more-summary').click();
 }
 
@@ -76,6 +87,7 @@ test('generates a gentle action plan through the main flow', async ({ page }) =>
     await page.getByRole('button', { name: /generate plan/i }).click();
 
     await expect(page.getByText(/this may be catastrophizing/i)).toBeVisible();
+    await openWorkspaceTabIfVisible(page, 'Check-in');
     await expect(page.getByRole('heading', { name: /^mood$/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /generate plan/i })).toHaveCount(0);
 });
@@ -153,6 +165,7 @@ test('persists saved check-ins and mood insights after a reload', async ({ page 
     await page.getByRole('button', { name: /generate plan/i }).click();
 
     await expect(page.getByRole('heading', { name: /three short lines/i })).toBeVisible();
+    await openWorkspaceTabIfVisible(page, 'Check-in');
     await expect(page.getByRole('heading', { name: /^mood$/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /generate plan/i })).toHaveCount(0);
 
@@ -223,6 +236,7 @@ test('covers reminder follow-ups through the welcome-back summary and calendar n
     await expect(summaryPanel.getByText(/1 new check-in since your last visit/i)).toBeVisible();
     await expect(summaryPanel.getByRole('button', { name: /open plan/i })).toHaveCount(1);
 
+    await openWorkspaceTabIfVisible(page, 'Calendar');
     await calendarPanel.getByRole('button', { name: /show next month/i }).click();
     await expect(calendarPanel.locator('.calendar-month-label')).toHaveText(formatCalendarMonthLabel(nextMonthReminderDate));
     await calendarPanel.getByRole('button', { name: nextMonthDayLabel }).click();

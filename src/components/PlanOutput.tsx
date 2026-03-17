@@ -61,7 +61,7 @@ export function PlanOutput({ entry, reminders, onCreateReminder, onToggleReminde
 
     if (!entry) {
         return (
-            <section id="planOutput" className="halo-panel px-5 py-5 sm:px-6">
+            <section id="planOutput" className="halo-panel px-4 py-4 sm:px-6">
                 <div>
                     <p className="halo-eyebrow">Your plan</p>
                     <h2 className="halo-section-title mt-2">Gentle action plan</h2>
@@ -113,7 +113,7 @@ export function PlanOutput({ entry, reminders, onCreateReminder, onToggleReminde
     }
 
     return (
-        <section id="planOutput" className="halo-panel px-5 py-5 sm:px-6">
+        <section id="planOutput" className="halo-panel px-4 py-4 sm:px-6">
             <div>
                 <p className="halo-eyebrow">Your plan</p>
                 <h2 className="halo-section-title mt-2">Gentle action plan</h2>

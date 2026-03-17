@@ -66,7 +66,7 @@ export function BreathingReset({ instruction }: BreathingResetProps) {
                 </button>
             </div>
 
-            <div className="mt-5 flex flex-col items-center gap-4 rounded-halo-md border border-halo-divider bg-halo-bg-soft px-5 py-6 text-center">
+            <div className="mt-5 flex flex-col items-center gap-4 rounded-halo-md border border-halo-divider bg-halo-bg-soft px-4 py-4 text-center">
                 <div
                     className="halo-orb"
                     data-reduced-motion={reducedMotion}

@@ -33,7 +33,7 @@ export function CalmingToolsPanel({ breathingInstruction, onOpenThoughtReframer 
     const [activeTool, setActiveTool] = useState<ToolKey>('breathing');
 
     return (
-        <details className="halo-panel px-5 py-5 sm:px-6">
+        <details className="halo-panel px-4 py-4 sm:px-6">
             <summary className="learn-more-summary">
                 <div>
                     <p className="halo-eyebrow">Calming tools</p>

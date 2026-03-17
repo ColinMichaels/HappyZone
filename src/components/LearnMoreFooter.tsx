@@ -16,7 +16,7 @@ export function LearnMoreFooter({ savedCheckInCount, savedReminderCount, onClear
 
     return (
         <footer className="mt-4 pb-4">
-            <details id="learnMorePanel" className="halo-panel px-5 py-5 sm:px-6">
+            <details id="learnMorePanel" className="halo-panel px-4 py-4 sm:px-6">
                 <summary className="learn-more-summary">
                     <div>
                         <p className="halo-eyebrow">How this works</p>

@@ -817,8 +817,6 @@ export function buildProgressSummary(
         headline = `${entriesSinceLastVisit} new ${pluralize(entriesSinceLastVisit, 'check-in')} since your last visit`;
     } else if (streakDays > 1) {
         headline = `${streakDays}-day reflection streak`;
-    } else if (upcomingReminders.length > 0) {
-        headline = 'A reminder is already queued for you';
     }
 
     const detailParts: string[] = [];
