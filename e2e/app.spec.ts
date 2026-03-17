@@ -7,6 +7,36 @@ test.beforeEach(async ({ page }) => {
     });
 });
 
+function padDateValue(value: number): string {
+    return String(value).padStart(2, '0');
+}
+
+function toDateTimeLocalValue(date: Date): string {
+    return `${date.getFullYear()}-${padDateValue(date.getMonth() + 1)}-${padDateValue(date.getDate())}T${padDateValue(date.getHours())}:${padDateValue(date.getMinutes())}`;
+}
+
+function formatCalendarMonthLabel(date: Date): string {
+    return new Intl.DateTimeFormat(undefined, {
+        month: 'long',
+        year: 'numeric'
+    }).format(date);
+}
+
+function formatCalendarDayLabel(date: Date): string {
+    return new Intl.DateTimeFormat(undefined, {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric'
+    }).format(date);
+}
+
+function buildCalendarDayButtonName(date: Date, entryCount: number, reminderCount: number): string {
+    const entryLabel = entryCount === 1 ? 'entry' : 'entries';
+    const reminderLabel = reminderCount === 1 ? 'reminder' : 'reminders';
+
+    return `${formatCalendarDayLabel(date)}. ${entryCount} journal ${entryLabel}. ${reminderCount} ${reminderLabel}.`;
+}
+
 async function moveToJournal(page: Page) {
     await page.goto('/');
     await page.getByRole('button', { name: /i understand/i }).click();
@@ -25,6 +55,19 @@ async function openMoodInsights(page: Page) {
 
 async function openCalmingTools(page: Page) {
     await page.locator('details.halo-panel:has-text("Calming tools") > summary.learn-more-summary').click();
+}
+
+async function createReminder(page: Page, title: string, scheduledFor: string, note?: string) {
+    const planOutput = page.locator('#planOutput');
+
+    await planOutput.getByLabel(/reminder title/i).fill(title);
+    await planOutput.getByLabel(/when should it happen/i).fill(scheduledFor);
+
+    if (note !== undefined) {
+        await planOutput.getByLabel(/reminder note/i).fill(note);
+    }
+
+    await planOutput.getByRole('button', { name: /save reminder/i }).click();
 }
 
 test('generates a gentle action plan through the main flow', async ({ page }) => {
@@ -96,7 +139,7 @@ test('opens calming tools and launches the reframer outside the journal flow', a
     await dialog.getByRole('textbox').fill('This is a hard day, but it is not the whole story.');
     await dialog.getByRole('button', { name: /add to journal/i }).click();
 
-    await expect(page.getByRole('heading', { name: /journal/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /^journal$/i })).toBeVisible();
     await expect(page.getByLabel(/what is happening right now/i)).toHaveValue(
         'Balanced truth: This is a hard day, but it is not the whole story.'
     );
@@ -119,7 +162,9 @@ test('persists saved check-ins and mood insights after a reload', async ({ page 
     await expect(page.getByRole('heading', { name: /three short lines/i })).toBeVisible();
 
     await openRecentCheckIns(page);
-    await expect(page.getByText(journalNote)).toBeVisible();
+    await expect(
+        page.locator('details.halo-panel:has-text("Recent check-ins") .halo-history-card').filter({ hasText: journalNote })
+    ).toHaveCount(1);
 
     await openMoodInsights(page);
     await expect(page.getByText(/1 day logged in the last four weeks/i)).toBeVisible();
@@ -139,4 +184,75 @@ test('persists the theme choice and first-visit acknowledgement after reload', a
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
     await expect(page.getByRole('button', { name: /i understand/i })).toHaveCount(0);
     await expect(page.getByRole('heading', { name: /private check-in/i })).toBeVisible();
+});
+
+test('covers reminder follow-ups through the welcome-back summary and calendar navigation', async ({ page }) => {
+    const now = new Date();
+    const dueReminderDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 9, 0, 0, 0);
+    const nextMonthReminderDate = new Date(now.getFullYear(), now.getMonth() + 1, 1, 9, 0, 0, 0);
+    const nextMonthDayLabel = buildCalendarDayButtonName(
+        new Date(nextMonthReminderDate.getFullYear(), nextMonthReminderDate.getMonth(), nextMonthReminderDate.getDate(), 12, 0, 0, 0),
+        0,
+        1
+    );
+
+    await moveToJournal(page);
+    await page.getByLabel(/what is happening right now/i).fill('I want to revisit this plan later and make sure the next step still feels realistic.');
+    await page.getByRole('button', { name: /generate plan/i }).click();
+
+    await expect(page.getByRole('heading', { name: /schedule a follow-up/i })).toBeVisible();
+
+    await createReminder(page, 'Check back in soon', toDateTimeLocalValue(dueReminderDate), 'Notice whether the calmer next step still fits.');
+    await expect(page.getByText(/reminder saved/i)).toBeVisible();
+
+    await createReminder(page, 'Review next month', toDateTimeLocalValue(nextMonthReminderDate));
+    await expect(page.locator('#planOutput').getByText('Review next month')).toBeVisible();
+
+    await page.reload();
+
+    const summaryPanel = page.locator('section.halo-panel').filter({
+        has: page.getByRole('heading', { name: /welcome back/i })
+    });
+    const calendarPanel = page.locator('#calendarPanel');
+
+    await expect(page.getByRole('button', { name: /i understand/i })).toHaveCount(0);
+    await expect(summaryPanel.getByText(/1 reminder ready to revisit/i)).toBeVisible();
+    await expect(summaryPanel.getByRole('button', { name: /open plan/i })).toHaveCount(2);
+    await summaryPanel.getByRole('button', { name: /mark done/i }).click();
+    await expect(summaryPanel.getByText(/ready now/i)).toHaveCount(0);
+    await expect(summaryPanel.getByText(/1 new check-in since your last visit/i)).toBeVisible();
+    await expect(summaryPanel.getByRole('button', { name: /open plan/i })).toHaveCount(1);
+
+    await calendarPanel.getByRole('button', { name: /show next month/i }).click();
+    await expect(calendarPanel.locator('.calendar-month-label')).toHaveText(formatCalendarMonthLabel(nextMonthReminderDate));
+    await calendarPanel.getByRole('button', { name: nextMonthDayLabel }).click();
+    await expect(calendarPanel.getByText('Review next month')).toBeVisible();
+    await expect(calendarPanel.getByRole('button', { name: /open linked plan/i })).toBeVisible();
+});
+
+test('covers the breathing reset and grounding guide calming tools', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: /i understand/i }).click();
+
+    await openCalmingTools(page);
+
+    const breathingCard = page.locator('.halo-card').filter({ hasText: 'One-minute breathing reset' });
+    const groundingCard = page.locator('.calming-tool-card').filter({ hasText: '5-4-3-2-1 reset' });
+
+    await expect(breathingCard.getByRole('heading', { name: /one-minute breathing reset/i })).toBeVisible();
+    await breathingCard.getByRole('button', { name: /start breathing/i }).click();
+    await expect(breathingCard.getByRole('button', { name: /stop breathing/i })).toBeVisible();
+
+    await page.getByRole('button', { name: /grounding guide/i }).click();
+    await expect(groundingCard.getByRole('heading', { name: /5-4-3-2-1 reset/i })).toBeVisible();
+    await expect(groundingCard.getByText(/step 1 of 5/i)).toBeVisible();
+
+    for (let step = 0; step < 4; step += 1) {
+        await groundingCard.getByRole('button', { name: /^next$/i }).click();
+    }
+
+    await groundingCard.getByRole('button', { name: /finish/i }).click();
+    await expect(groundingCard.getByText(/grounding pass complete/i)).toBeVisible();
+    await groundingCard.getByRole('button', { name: /run again/i }).click();
+    await expect(groundingCard.getByText(/step 1 of 5/i)).toBeVisible();
 });

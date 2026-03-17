@@ -1,11 +1,25 @@
 import {
+    applyTheme,
     buildIcsCalendarExport,
     buildPlan,
     buildProgressSummary,
     buildSupportRecommendation,
+    clearSavedLocalData,
     detectSupportSignal,
     inferMood,
+    loadCheckIns,
+    loadDisclaimerAcknowledged,
+    loadReminders,
+    loadSupportAnalytics,
+    loadSupportPreference,
+    loadTheme,
+    loadVisitSnapshot,
     mergeCheckInEntry,
+    saveCheckIns,
+    saveDisclaimerAcknowledged,
+    saveReminders,
+    saveSupportPreference,
+    saveVisitSnapshot,
     trackSupportAnalytics
 } from './happyzone';
 
@@ -163,5 +177,54 @@ describe('happyzone logic', () => {
         expect(calendarExport.content).toContain('SUMMARY:HappyZone check-in: Anxious');
         expect(calendarExport.content).toContain('SUMMARY:Revisit your calm plan');
         expect(calendarExport.content).toContain('BEGIN:VALARM');
+    });
+
+    it('clears saved local data without resetting theme or disclaimer acknowledgement', async () => {
+        saveCheckIns([{
+            id: 'entry-1',
+            mood: 'steady',
+            focus: 'calm',
+            note: 'I am checking in.',
+            summary: 'I am checking in.',
+            crisis: false,
+            createdAt: '2026-03-16T10:00:00.000Z'
+        }]);
+        saveReminders([{
+            id: 'reminder-1',
+            checkInId: 'entry-1',
+            title: 'Check back in',
+            note: '',
+            scheduledFor: '2026-03-17T10:00:00.000Z',
+            createdAt: '2026-03-16T10:05:00.000Z',
+            completedAt: null
+        }]);
+        saveVisitSnapshot({
+            lastSeenAt: '2026-03-16T09:00:00.000Z'
+        });
+        trackSupportAnalytics('modal-opened');
+        await saveSupportPreference({
+            personalizedRecommendations: true,
+            updatedAt: '2026-03-16T10:10:00.000Z'
+        });
+        applyTheme('dark');
+        saveDisclaimerAcknowledged();
+
+        clearSavedLocalData();
+
+        expect(loadCheckIns()).toEqual([]);
+        expect(loadReminders()).toEqual([]);
+        expect(loadVisitSnapshot()).toEqual({
+            lastSeenAt: null
+        });
+        expect(loadSupportAnalytics()).toMatchObject({
+            supportButtonOpened: 0,
+            supportResourcesUsed: 0,
+            safetyPlanOpened: 0,
+            personalizedRecommendationOptIns: 0,
+            lastOpenedAt: null
+        });
+        expect(await loadSupportPreference()).toBeNull();
+        expect(loadTheme()).toBe('dark');
+        expect(loadDisclaimerAcknowledged()).toBe(true);
     });
 });

@@ -55,6 +55,8 @@ When the user comes back, the app compares the current session against the previ
 
 Reminders are attached to specific journal entries so the user can jump back into the linked plan instead of seeing an orphaned notification.
 
+The footer also now includes a user-facing clear-data control for wiping saved check-ins, reminders, visit snapshot data, and support-related stored preferences from the current browser without changing theme or disclaimer state.
+
 ### 7. Calendar And Export
 
 The app now includes a responsive month view that places:
@@ -89,6 +91,28 @@ The app uses `localStorage` for:
 - support analytics counters
 - encrypted support preference
 
+### Storage Keys And Retention
+
+| Key | Purpose | Retention / limit |
+| --- | --- | --- |
+| `happyzone.checkins.v2` | Saved journal check-ins and generated-plan source entries | Keeps the newest 42 entries |
+| `happyzone.reminders.v1` | Reminders linked to saved check-ins | Keeps the newest 84 reminders after sort |
+| `happyzone.visit-snapshot.v1` | Last-seen timestamp for returning-session summary | One value until replaced or cleared |
+| `happyzone.theme.v1` | Theme preference | One value until replaced or cleared manually |
+| `happyzone.disclaimer.ack.v1` | First-visit disclaimer acknowledgement | One value until cleared manually |
+| `happyzone.support.analytics.v1` | Local analytics counters for support actions | One object until replaced or cleared |
+| `happyzone.support.preference.v1` | Encrypted support recommendation opt-in preference | One encrypted value until replaced or cleared |
+
+The clear-data footer action removes:
+
+- `happyzone.checkins.v2`
+- `happyzone.reminders.v1`
+- `happyzone.visit-snapshot.v1`
+- `happyzone.support.analytics.v1`
+- `happyzone.support.preference.v1`
+
+It intentionally leaves theme and disclaimer acknowledgement in place.
+
 ## Verification Snapshot
 
 As of the current repo state, the main local verification path is:
@@ -101,6 +125,7 @@ That runs:
 
 - `npm run typecheck`
 - `npm run test`
+- `npm run build`
 - `npm run test:e2e`
 
 The Playwright suite currently covers desktop Chromium and mobile Chromium emulation.

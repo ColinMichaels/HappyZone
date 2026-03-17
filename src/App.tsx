@@ -18,6 +18,7 @@ import {
     buildIcsCalendarExport,
     buildProgressSummary,
     buildSupportRecommendation,
+    clearSavedLocalData,
     detectCrisis,
     detectSupportSignal,
     getRemindersForCheckIn,
@@ -358,6 +359,16 @@ export default function App() {
         setCalendarExportStatus(`Downloaded ${calendarExport.filename}. Import it into Google, Apple, or Outlook to add these events.`);
     }
 
+    function handleClearSavedData() {
+        clearSavedLocalData();
+        setCheckIns([]);
+        setReminders([]);
+        setActiveEntry(null);
+        setPersonalizedSupportRecommendations(false);
+        setCalendarExportStatus('');
+        resetDraft();
+    }
+
     return (
         <div className="min-h-screen bg-halo-bg text-halo-text">
             <div className="halo-aura halo-aura-one"></div>
@@ -516,7 +527,11 @@ export default function App() {
                     />
                 </main>
 
-                <LearnMoreFooter />
+                <LearnMoreFooter
+                    savedCheckInCount={checkIns.length}
+                    savedReminderCount={reminders.length}
+                    onClearSavedData={handleClearSavedData}
+                />
 
                 <DisclaimerModal
                     isOpen={isDisclaimerOpen}
