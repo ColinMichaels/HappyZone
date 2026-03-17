@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import App from './App';
-import { loadCheckIns } from './lib/happyzone';
+import { loadCheckIns, loadReminders, saveCheckIns, saveReminders, saveVisitSnapshot } from './lib/happyzone';
 
 async function moveToJournalStep(user: ReturnType<typeof userEvent.setup>) {
     await user.click(screen.getByRole('button', { name: /i understand/i }));
@@ -29,6 +29,27 @@ describe('App regression coverage', () => {
         expect(screen.getByRole('heading', { name: /^mood$/i })).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: /generate plan/i })).not.toBeInTheDocument();
         expect(loadCheckIns()).toHaveLength(1);
+    });
+
+    it('lets a user save a reminder from the generated plan', async () => {
+        const user = userEvent.setup();
+        render(<App />);
+
+        await moveToJournalStep(user);
+        await user.type(
+            screen.getByLabelText(/what is happening right now/i),
+            'I want to come back to this plan tomorrow and check whether it helped.'
+        );
+
+        await user.click(screen.getByRole('button', { name: /generate plan/i }));
+        await screen.findByRole('heading', { name: /schedule a follow-up/i });
+
+        await user.click(screen.getByRole('button', { name: /save reminder/i }));
+
+        expect(await screen.findByText(/reminder saved/i)).toBeInTheDocument();
+        expect(loadReminders()).toHaveLength(1);
+        expect(screen.getAllByText(/pending/i)[0]).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /export calendar as ics/i })).toBeInTheDocument();
     });
 
     it('shows the support guardrail when the journal text looks riskier', async () => {
@@ -85,9 +106,44 @@ describe('App regression coverage', () => {
         await user.type(within(dialog).getByRole('textbox'), 'This is hard, but I can take one next step.');
         await user.click(within(dialog).getByRole('button', { name: /add to journal/i }));
 
-        expect(screen.getByRole('heading', { name: /journal/i })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: /^journal$/i })).toBeInTheDocument();
         expect(screen.getByLabelText(/what is happening right now/i)).toHaveValue(
             'Balanced truth: This is hard, but I can take one next step.'
         );
+    });
+
+    it('shows a welcome-back summary with due reminders on the next load', async () => {
+        const user = userEvent.setup();
+
+        saveCheckIns([{
+            id: 'entry-1',
+            mood: 'steady',
+            focus: 'calm',
+            note: 'I want to keep building steadiness.',
+            summary: 'I want to keep building steadiness.',
+            crisis: false,
+            createdAt: '2020-01-02T10:00:00.000Z'
+        }]);
+        saveReminders([{
+            id: 'reminder-1',
+            checkInId: 'entry-1',
+            title: 'Check back in',
+            note: 'Review the calm plan.',
+            scheduledFor: '2020-01-03T09:00:00.000Z',
+            createdAt: '2020-01-02T10:05:00.000Z',
+            completedAt: null
+        }]);
+        saveVisitSnapshot({
+            lastSeenAt: '2020-01-01T09:00:00.000Z'
+        });
+
+        render(<App />);
+
+        await user.click(screen.getByRole('button', { name: /i understand/i }));
+
+        expect(screen.getByRole('heading', { name: /welcome back/i })).toBeInTheDocument();
+        expect(screen.getByText(/1 reminder ready to revisit/i)).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /view calendar/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /open plan/i })).toBeInTheDocument();
     });
 });

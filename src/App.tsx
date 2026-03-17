@@ -1,40 +1,57 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { focusContent, moodContent, promptDeck, ritualActions, writingPrompts } from './content';
-import {
-    applyTheme,
-    buildSupportRecommendation,
-    detectCrisis,
-    detectSupportSignal,
-    inferMood,
-    loadCheckIns,
-    loadDisclaimerAcknowledged,
-    loadSupportPreference,
-    loadTheme,
-    mergeCheckInEntry,
-    resolveFocusFromMood,
-    saveCheckIns,
-    saveDisclaimerAcknowledged,
-    saveSupportPreference,
-    summarizeNote,
-    trackSupportAnalytics
-} from './lib/happyzone';
-import type { CheckInEntry, MoodKey, StatusState, SupportFocus, ThemeMode, WizardStep } from './types';
+import { CalendarPanel } from './components/CalendarPanel';
 import { ChoiceGrid } from './components/ChoiceGrid';
 import { Header } from './components/Header';
 import { HistoryPanel } from './components/HistoryPanel';
 import { JournalStep } from './components/JournalStep';
 import { LearnMoreFooter } from './components/LearnMoreFooter';
 import { PlanOutput } from './components/PlanOutput';
+import { ProgressSummaryPanel } from './components/ProgressSummaryPanel';
 import { DisclaimerModal } from './components/DisclaimerModal';
 import { SupportModal } from './components/SupportModal';
 import { ThoughtReframerModal } from './components/ThoughtReframerModal';
 import { CalmingToolsPanel } from './components/CalmingToolsPanel';
+import {
+    applyTheme,
+    buildIcsCalendarExport,
+    buildProgressSummary,
+    buildSupportRecommendation,
+    detectCrisis,
+    detectSupportSignal,
+    getRemindersForCheckIn,
+    inferMood,
+    loadCheckIns,
+    loadDisclaimerAcknowledged,
+    loadReminders,
+    loadSupportPreference,
+    loadTheme,
+    loadVisitSnapshot,
+    mergeCheckInEntry,
+    mergeReminderEntry,
+    resolveFocusFromMood,
+    saveCheckIns,
+    saveDisclaimerAcknowledged,
+    saveReminders,
+    saveSupportPreference,
+    saveVisitSnapshot,
+    summarizeNote,
+    toggleReminderCompletion,
+    trackSupportAnalytics
+} from './lib/happyzone';
 import { utilityIcons } from './lib/materialIcons';
+import type { CheckInEntry, MoodKey, ReminderEntry, StatusState, SupportFocus, ThemeMode, WizardStep } from './types';
 
 interface FormStatus {
     message: string;
     state: StatusState;
+}
+
+interface AppBootstrap {
+    checkIns: CheckInEntry[];
+    reminders: ReminderEntry[];
+    lastSeenAt: string | null;
 }
 
 const emptyStatus: FormStatus = {
@@ -42,7 +59,26 @@ const emptyStatus: FormStatus = {
     state: 'default'
 };
 
+function loadBootstrap(): AppBootstrap {
+    const checkIns = loadCheckIns();
+    const reminders = loadReminders();
+    const visitSnapshot = loadVisitSnapshot();
+
+    return {
+        checkIns,
+        reminders,
+        lastSeenAt: visitSnapshot.lastSeenAt
+    };
+}
+
 export default function App() {
+    const bootstrapRef = useRef<AppBootstrap | null>(null);
+
+    if (!bootstrapRef.current) {
+        bootstrapRef.current = loadBootstrap();
+    }
+
+    const bootstrap = bootstrapRef.current;
     const [theme, setTheme] = useState<ThemeMode>(() => loadTheme());
     const [step, setStep] = useState<WizardStep>('mood');
     const [selectedMood, setSelectedMood] = useState<MoodKey | null>(null);
@@ -50,21 +86,26 @@ export default function App() {
     const [hasManualFocusSelection, setHasManualFocusSelection] = useState(false);
     const [note, setNote] = useState('');
     const [status, setStatus] = useState<FormStatus>(emptyStatus);
-    const [checkIns, setCheckIns] = useState<CheckInEntry[]>(() => loadCheckIns());
-    const [activeEntry, setActiveEntry] = useState<CheckInEntry | null>(() => {
-        const entries = loadCheckIns();
-        return entries[0] ?? null;
-    });
+    const [checkIns, setCheckIns] = useState<CheckInEntry[]>(bootstrap.checkIns);
+    const [reminders, setReminders] = useState<ReminderEntry[]>(bootstrap.reminders);
+    const [activeEntry, setActiveEntry] = useState<CheckInEntry | null>(bootstrap.checkIns[0] ?? null);
     const [isDisclaimerOpen, setIsDisclaimerOpen] = useState<boolean>(() => !loadDisclaimerAcknowledged());
     const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
     const [isThoughtReframerOpen, setIsThoughtReframerOpen] = useState(false);
     const [personalizedSupportRecommendations, setPersonalizedSupportRecommendations] = useState(false);
     const [promptIndex, setPromptIndex] = useState(() => new Date().getDate() % promptDeck.length);
+    const [calendarExportStatus, setCalendarExportStatus] = useState('');
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     useEffect(() => {
         applyTheme(theme);
     }, [theme]);
+
+    useEffect(() => {
+        saveVisitSnapshot({
+            lastSeenAt: new Date().toISOString()
+        });
+    }, []);
 
     useEffect(() => {
         const textarea = textareaRef.current;
@@ -92,6 +133,7 @@ export default function App() {
         };
     }, []);
 
+    const progressSummary = buildProgressSummary(checkIns, reminders, bootstrap.lastSeenAt);
     const noteLength = note.trim().length;
     const supportSignalDetected = noteLength > 0 && detectSupportSignal(note);
     const supportRecommendation = personalizedSupportRecommendations
@@ -102,6 +144,7 @@ export default function App() {
     const activeFocus = selectedFocus ?? activeEntry?.focus ?? 'calm';
     const breathingInstruction = focusContent[activeFocus].resetCue;
     const WarningIcon = utilityIcons.warning;
+    const activeEntryReminders = activeEntry ? getRemindersForCheckIn(reminders, activeEntry.id) : [];
 
     const moodItems = (Object.keys(moodContent) as MoodKey[]).map((key) => ({
         value: key,
@@ -117,6 +160,22 @@ export default function App() {
 
     function focusJournalSoon() {
         window.setTimeout(() => textareaRef.current?.focus(), 0);
+    }
+
+    function focusPlanSoon() {
+        window.setTimeout(() => document.getElementById('planOutput')?.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+        }), 0);
+    }
+
+    function openEntry(entry: CheckInEntry, message: string) {
+        setActiveEntry(entry);
+        setStatus({
+            message,
+            state: 'info'
+        });
+        focusPlanSoon();
     }
 
     function handleSelectMood(nextMood: MoodKey) {
@@ -205,6 +264,7 @@ export default function App() {
         }
 
         resetDraft();
+        focusPlanSoon();
     }
 
     function clearForm() {
@@ -234,6 +294,70 @@ export default function App() {
         }
     }
 
+    function handleCreateReminder(entry: CheckInEntry, draft: { title: string; note: string; scheduledFor: string }): boolean {
+        const reminder: ReminderEntry = {
+            id: crypto.randomUUID(),
+            checkInId: entry.id,
+            title: draft.title,
+            note: draft.note,
+            scheduledFor: draft.scheduledFor,
+            createdAt: new Date().toISOString(),
+            completedAt: null
+        };
+
+        const result = mergeReminderEntry(reminders, reminder);
+
+        if (!result.isDuplicate) {
+            setReminders(result.reminders);
+            saveReminders(result.reminders);
+        }
+
+        return result.isDuplicate;
+    }
+
+    function handleToggleReminder(reminderId: string) {
+        const nextReminders = toggleReminderCompletion(reminders, reminderId);
+        setReminders(nextReminders);
+        saveReminders(nextReminders);
+    }
+
+    function handleOpenReminder(reminder: ReminderEntry) {
+        const linkedEntry = checkIns.find((entry) => entry.id === reminder.checkInId);
+
+        if (!linkedEntry) {
+            setStatus({
+                message: 'The reminder is saved, but its linked journal entry is not available on this device.',
+                state: 'info'
+            });
+            return;
+        }
+
+        openEntry(linkedEntry, `Loaded the plan linked to "${reminder.title}".`);
+    }
+
+    function handleExportCalendar() {
+        if (checkIns.length === 0 && reminders.length === 0) {
+            setCalendarExportStatus('Save a check-in or reminder before exporting a calendar file.');
+            return;
+        }
+
+        const calendarExport = buildIcsCalendarExport(checkIns, reminders);
+        const calendarBlob = new Blob([calendarExport.content], {
+            type: 'text/calendar;charset=utf-8'
+        });
+        const downloadUrl = window.URL.createObjectURL(calendarBlob);
+        const link = document.createElement('a');
+
+        link.href = downloadUrl;
+        link.download = calendarExport.filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+
+        window.setTimeout(() => window.URL.revokeObjectURL(downloadUrl), 0);
+        setCalendarExportStatus(`Downloaded ${calendarExport.filename}. Import it into Google, Apple, or Outlook to add these events.`);
+    }
+
     return (
         <div className="min-h-screen bg-halo-bg text-halo-text">
             <div className="halo-aura halo-aura-one"></div>
@@ -243,6 +367,12 @@ export default function App() {
                 <Header theme={theme} onThemeChange={setTheme} />
 
                 <main className="mt-4 grid gap-4">
+                    <ProgressSummaryPanel
+                        summary={progressSummary}
+                        onOpenReminder={handleOpenReminder}
+                        onToggleReminder={handleToggleReminder}
+                    />
+
                     <form className="wizard-flow" onSubmit={handleSubmit} noValidate>
                         {step === 'mood' ? (
                             <section className="halo-panel wizard-step px-5 py-5 sm:px-6">
@@ -359,7 +489,21 @@ export default function App() {
                         ) : null}
                     </form>
 
-                    <PlanOutput entry={activeEntry} />
+                    <PlanOutput
+                        entry={activeEntry}
+                        reminders={activeEntryReminders}
+                        onCreateReminder={handleCreateReminder}
+                        onToggleReminder={handleToggleReminder}
+                    />
+
+                    <CalendarPanel
+                        entries={checkIns}
+                        reminders={reminders}
+                        onSelectEntry={(entry) => openEntry(entry, 'Loaded a saved check-in.')}
+                        onToggleReminder={handleToggleReminder}
+                        onExportCalendar={handleExportCalendar}
+                        exportStatusMessage={calendarExportStatus}
+                    />
 
                     <CalmingToolsPanel
                         breathingInstruction={breathingInstruction}
@@ -368,13 +512,7 @@ export default function App() {
 
                     <HistoryPanel
                         entries={checkIns}
-                        onSelect={(entry) => {
-                            setActiveEntry(entry);
-                            setStatus({
-                                message: 'Loaded a saved check-in.',
-                                state: 'info'
-                            });
-                        }}
+                        onSelect={(entry) => openEntry(entry, 'Loaded a saved check-in.')}
                     />
                 </main>
 

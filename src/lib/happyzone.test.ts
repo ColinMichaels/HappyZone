@@ -1,5 +1,7 @@
 import {
+    buildIcsCalendarExport,
     buildPlan,
+    buildProgressSummary,
     buildSupportRecommendation,
     detectSupportSignal,
     inferMood,
@@ -71,5 +73,95 @@ describe('happyzone logic', () => {
             activeEntry: existingEntry,
             isDuplicate: true
         });
+    });
+
+    it('summarizes progress with streak and reminder counts for a returning session', () => {
+        const entries = [
+            {
+                id: 'entry-2',
+                mood: 'hopeful' as const,
+                focus: 'clarity' as const,
+                note: 'I can see a useful next step again.',
+                summary: 'I can see a useful next step again.',
+                crisis: false,
+                createdAt: '2026-03-16T09:00:00.000Z'
+            },
+            {
+                id: 'entry-1',
+                mood: 'anxious' as const,
+                focus: 'calm' as const,
+                note: 'Yesterday felt noisy, but I slowed down.',
+                summary: 'Yesterday felt noisy, but I slowed down.',
+                crisis: false,
+                createdAt: '2026-03-15T09:00:00.000Z'
+            }
+        ];
+
+        const reminders = [
+            {
+                id: 'reminder-1',
+                checkInId: 'entry-1',
+                title: 'Revisit your calm plan',
+                note: 'Notice whether the breathing cue helped.',
+                scheduledFor: '2026-03-16T08:00:00.000Z',
+                createdAt: '2026-03-15T09:05:00.000Z',
+                completedAt: null
+            },
+            {
+                id: 'reminder-2',
+                checkInId: 'entry-2',
+                title: 'Check in before tomorrow starts',
+                note: '',
+                scheduledFor: '2026-03-17T08:00:00.000Z',
+                createdAt: '2026-03-16T09:05:00.000Z',
+                completedAt: null
+            }
+        ];
+
+        expect(buildProgressSummary(
+            entries,
+            reminders,
+            '2026-03-16T07:30:00.000Z',
+            '2026-03-16T12:00:00.000Z'
+        )).toMatchObject({
+            headline: '1 reminder ready to revisit',
+            entriesSinceLastVisit: 1,
+            streakDays: 2,
+            dominantMood: 'hopeful'
+        });
+    });
+
+    it('builds an ICS export with journal events and reminder alarms', () => {
+        const entries = [
+            {
+                id: 'entry-1',
+                mood: 'anxious' as const,
+                focus: 'calm' as const,
+                note: 'I feel on edge.',
+                summary: 'I feel on edge.',
+                crisis: false,
+                createdAt: '2026-03-16T10:00:00.000Z'
+            }
+        ];
+
+        const reminders = [
+            {
+                id: 'reminder-1',
+                checkInId: 'entry-1',
+                title: 'Revisit your calm plan',
+                note: 'See if the breath work helped.',
+                scheduledFor: '2026-03-17T15:00:00.000Z',
+                createdAt: '2026-03-16T10:05:00.000Z',
+                completedAt: null
+            }
+        ];
+
+        const calendarExport = buildIcsCalendarExport(entries, reminders, '2026-03-16T12:00:00.000Z');
+
+        expect(calendarExport.filename).toBe('happyzone-calendar-20260316.ics');
+        expect(calendarExport.content).toContain('BEGIN:VCALENDAR');
+        expect(calendarExport.content).toContain('SUMMARY:HappyZone check-in: Anxious');
+        expect(calendarExport.content).toContain('SUMMARY:Revisit your calm plan');
+        expect(calendarExport.content).toContain('BEGIN:VALARM');
     });
 });

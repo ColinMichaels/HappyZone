@@ -9,6 +9,9 @@ A private, local-first wellness check-in app built around a calm mobile flow, re
 - Surfaces a local-only support guardrail when journal text includes higher-risk language
 - Includes calming tools outside the main flow: breathing reset, grounding guide, and thought reframer
 - Saves recent check-ins on the device and shows a four-week mood heatmap
+- Adds a returning-session progress snapshot with due reminders and recent momentum
+- Places saved journal entries and reminders on a responsive monthly calendar view
+- Lets the user attach local reminders to any saved plan and export a one-way `.ics` calendar snapshot
 - Supports light and moonlit dark themes, plus a first-visit disclaimer flow
 - Keeps processing in the browser with no backend or remote data storage
 
@@ -49,24 +52,26 @@ npm run build
 
 Current automated coverage includes:
 
-- Unit and component checks for app state, support logic, duplicate-entry prevention, and reframer flows
+- Unit and component checks for app state, support logic, duplicate-entry prevention, reminders, returning-session summaries, and reframer flows
 - Browser checks in desktop Chromium and mobile Chromium emulation
-- Persistence checks for saved check-ins, theme choice, disclaimer acknowledgement, and mood insights
+- Persistence checks for saved check-ins, reminders, session snapshots, theme choice, disclaimer acknowledgement, and mood insights
 
 The browser tests stay local to the machine running them. The CI workflow in `.github/workflows/ci.yml` runs type checking, Vitest, and Playwright on every push and pull request.
 
 ## Privacy
 
 - Check-ins are stored in `localStorage` on the current device/browser
+- Reminders and the last-visit snapshot are also stored locally
 - Theme preference, disclaimer acknowledgement, support analytics, and support preference are also stored locally
 - Journal processing, support detection, and mood insights all happen in-browser
+- Calendar export is a manual one-way `.ics` file generated in the browser
 - No journal content is transmitted to a server
 
 ## Project Structure
 
 - `src/App.tsx`: top-level flow orchestration and persistence wiring
 - `src/components/`: reusable UI components for steps, outputs, modals, tools, and history
-- `src/lib/happyzone.ts`: local storage, heuristics, plan generation, and helper logic
+- `src/lib/happyzone.ts`: local storage, heuristics, plan generation, reminder/calendar export, and helper logic
 - `src/content.ts`: mood/focus copy, prompts, support resources, and breathing steps
 - `e2e/`: Playwright browser coverage
 - `docs/`: prompts, overview notes, and future-work checklist

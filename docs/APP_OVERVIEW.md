@@ -44,6 +44,26 @@ These tools are designed as optional helpers outside the main journaling flow.
 
 The app stores recent check-ins locally, shows a compact history list, and derives a four-week mood heatmap using only data saved in the browser.
 
+### 6. Returning Summary And Reminders
+
+When the user comes back, the app compares the current session against the previous local visit snapshot and builds a compact progress summary. That summary can show:
+
+- due reminders
+- recent streak length
+- recent dominant mood
+- fresh check-ins since the last visit
+
+Reminders are attached to specific journal entries so the user can jump back into the linked plan instead of seeing an orphaned notification.
+
+### 7. Calendar And Export
+
+The app now includes a responsive month view that places:
+
+- journal entries on the day they were created
+- reminders on the day they are scheduled
+
+The calendar is local-first. External calendar support is currently a manual `.ics` export, which creates a one-way snapshot suitable for import into services like Google Calendar, Apple Calendar, or Outlook.
+
 ## Architecture
 
 ### UI
@@ -54,7 +74,7 @@ The app stores recent check-ins locally, shows a compact history list, and deriv
 
 ### Logic
 
-- `src/lib/happyzone.ts` contains persistence helpers, support detection, plan generation, duplicate prevention, and analytics helpers
+- `src/lib/happyzone.ts` contains persistence helpers, support detection, plan generation, duplicate prevention, reminder/calendar export logic, and analytics helpers
 - `src/content.ts` contains prompts, mood/focus copy, support resources, and breathing-step content
 
 ### Storage
@@ -62,6 +82,8 @@ The app stores recent check-ins locally, shows a compact history list, and deriv
 The app uses `localStorage` for:
 
 - check-ins
+- reminders
+- visit snapshot / last-seen timestamp
 - theme preference
 - disclaimer acknowledgement
 - support analytics counters
@@ -96,6 +118,8 @@ There is also a `gh-pages` package install and a manual `npm run deploy` script 
 ## Current Limits
 
 - No backend or cloud sync
+- No real browser or OS-level reminder scheduling yet; reminders are surfaced when the app is opened again
+- Calendar export is one-way and does not stay synced after import
 - No clinician review or medical-service functionality
 - Support resources are currently U.S.-centric
 - Accessibility has automated coverage and structured markup, but still needs periodic manual device and screen-reader QA

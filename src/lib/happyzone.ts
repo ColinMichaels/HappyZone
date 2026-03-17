@@ -1,12 +1,29 @@
 import { crisisPatterns, defaultFocusByMood, focusContent, moodContent, moodKeywords, supportSignalPatterns } from '../content';
-import type { BuiltPlan, CheckInEntry, MoodKey, SupportAnalytics, SupportFocus, SupportPreference, SupportRecommendation, ThemeMode } from '../types';
+import type {
+    BuiltPlan,
+    CalendarExport,
+    CheckInEntry,
+    MoodKey,
+    ProgressSummary,
+    ReminderEntry,
+    SupportAnalytics,
+    SupportFocus,
+    SupportPreference,
+    SupportRecommendation,
+    ThemeMode,
+    VisitSnapshot
+} from '../types';
 
-const STORAGE_KEY = 'happyzone.checkins.v2';
+const CHECKIN_STORAGE_KEY = 'happyzone.checkins.v2';
+const REMINDER_STORAGE_KEY = 'happyzone.reminders.v1';
+const VISIT_SNAPSHOT_KEY = 'happyzone.visit-snapshot.v1';
 const THEME_KEY = 'happyzone.theme.v1';
 const SUPPORT_ANALYTICS_KEY = 'happyzone.support.analytics.v1';
 const SUPPORT_PREFERENCE_KEY = 'happyzone.support.preference.v1';
 const DISCLAIMER_ACK_KEY = 'happyzone.disclaimer.ack.v1';
+
 export const STORED_CHECKIN_LIMIT = 42;
+export const STORED_REMINDER_LIMIT = 84;
 export const RECENT_CHECKIN_PREVIEW_LIMIT = 6;
 
 const SUPPORT_PREFERENCE_SECRET = 'happyzone-support-pref-v1';
@@ -20,6 +37,10 @@ const defaultSupportAnalytics: SupportAnalytics = {
     safetyPlanOpened: 0,
     personalizedRecommendationOptIns: 0,
     lastOpenedAt: null
+};
+
+const defaultVisitSnapshot: VisitSnapshot = {
+    lastSeenAt: null
 };
 
 const validationByMood: Record<MoodKey, string> = {
@@ -80,6 +101,117 @@ const distortionRules = [
     }
 ] as const;
 
+function padDateValue(value: number): string {
+    return String(value).padStart(2, '0');
+}
+
+function toLocalDateKeyFromDate(date: Date): string {
+    return `${date.getFullYear()}-${padDateValue(date.getMonth() + 1)}-${padDateValue(date.getDate())}`;
+}
+
+function isValidDate(value: string): boolean {
+    return !Number.isNaN(new Date(value).getTime());
+}
+
+function sortReminders(reminders: ReminderEntry[]): ReminderEntry[] {
+    return [...reminders].sort((left, right) => {
+        const leftCompleted = left.completedAt ? 1 : 0;
+        const rightCompleted = right.completedAt ? 1 : 0;
+
+        if (leftCompleted !== rightCompleted) {
+            return leftCompleted - rightCompleted;
+        }
+
+        return new Date(left.scheduledFor).getTime() - new Date(right.scheduledFor).getTime();
+    });
+}
+
+function pluralize(count: number, singular: string, plural = `${singular}s`): string {
+    return count === 1 ? singular : plural;
+}
+
+function shiftMinutes(timestamp: string, minutes: number): string {
+    const next = new Date(timestamp);
+    next.setMinutes(next.getMinutes() + minutes);
+    return next.toISOString();
+}
+
+function escapeIcsText(value: string): string {
+    return value
+        .replace(/\\/g, '\\\\')
+        .replace(/\r?\n/g, '\\n')
+        .replace(/;/g, '\\;')
+        .replace(/,/g, '\\,');
+}
+
+function formatIcsDate(timestamp: string | Date): string {
+    const value = timestamp instanceof Date ? timestamp : new Date(timestamp);
+
+    return `${value.getUTCFullYear()}${padDateValue(value.getUTCMonth() + 1)}${padDateValue(value.getUTCDate())}T${padDateValue(value.getUTCHours())}${padDateValue(value.getUTCMinutes())}${padDateValue(value.getUTCSeconds())}Z`;
+}
+
+function getDominantMood(entries: CheckInEntry[]): MoodKey | null {
+    if (entries.length === 0) {
+        return null;
+    }
+
+    const counts = new Map<MoodKey, number>();
+
+    entries.forEach((entry) => {
+        counts.set(entry.mood, (counts.get(entry.mood) ?? 0) + 1);
+    });
+
+    let dominantMood = entries[0].mood;
+    let dominantCount = counts.get(dominantMood) ?? 0;
+
+    entries.forEach((entry) => {
+        const currentCount = counts.get(entry.mood) ?? 0;
+
+        if (currentCount > dominantCount) {
+            dominantMood = entry.mood;
+            dominantCount = currentCount;
+        }
+    });
+
+    return dominantMood;
+}
+
+function getEntryStreak(entries: CheckInEntry[]): number {
+    const uniqueDays = Array.from(new Set(entries.map((entry) => toCalendarDateKey(entry.createdAt))));
+
+    if (uniqueDays.length === 0) {
+        return 0;
+    }
+
+    let streak = 1;
+    let expectedDate = fromCalendarDateKey(uniqueDays[0]);
+
+    for (let index = 1; index < uniqueDays.length; index += 1) {
+        expectedDate = new Date(expectedDate.getFullYear(), expectedDate.getMonth(), expectedDate.getDate() - 1, 12, 0, 0, 0);
+
+        if (uniqueDays[index] !== toCalendarDateKey(expectedDate)) {
+            break;
+        }
+
+        streak += 1;
+    }
+
+    return streak;
+}
+
+function getReferenceEntries(entries: CheckInEntry[], lastSeenAt: string | null): CheckInEntry[] {
+    if (lastSeenAt) {
+        const lastSeenTimestamp = new Date(lastSeenAt).getTime();
+        const freshEntries = entries.filter((entry) => new Date(entry.createdAt).getTime() > lastSeenTimestamp);
+
+        if (freshEntries.length > 0) {
+            return freshEntries.slice(0, 5);
+        }
+    }
+
+    return entries.slice(0, 5);
+}
+
 export function isMoodKey(value: unknown): value is MoodKey {
     return typeof value === 'string' && value in moodContent;
 }
@@ -92,9 +224,19 @@ export function resolveFocusFromMood(mood: MoodKey): SupportFocus {
     return defaultFocusByMood[mood];
 }
 
+export function toCalendarDateKey(timestamp: string | Date): string {
+    const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
+    return toLocalDateKeyFromDate(date);
+}
+
+export function fromCalendarDateKey(dateKey: string): Date {
+    const [year, month, day] = dateKey.split('-').map((segment) => Number(segment));
+    return new Date(year, month - 1, day, 12, 0, 0, 0);
+}
+
 export function loadCheckIns(): CheckInEntry[] {
     try {
-        const raw = window.localStorage.getItem(STORAGE_KEY);
+        const raw = window.localStorage.getItem(CHECKIN_STORAGE_KEY);
         if (!raw) {
             return [];
         }
@@ -119,7 +261,7 @@ export function loadCheckIns(): CheckInEntry[] {
                 return [];
             }
 
-            const createdAt = typeof (item as { createdAt?: unknown }).createdAt === 'string'
+            const createdAt = typeof (item as { createdAt?: unknown }).createdAt === 'string' && isValidDate((item as { createdAt: string }).createdAt)
                 ? (item as { createdAt: string }).createdAt
                 : new Date().toISOString();
 
@@ -149,7 +291,68 @@ export function loadCheckIns(): CheckInEntry[] {
 }
 
 export function saveCheckIns(entries: CheckInEntry[]): void {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(entries.slice(0, STORED_CHECKIN_LIMIT)));
+    window.localStorage.setItem(CHECKIN_STORAGE_KEY, JSON.stringify(entries.slice(0, STORED_CHECKIN_LIMIT)));
+}
+
+export function loadReminders(): ReminderEntry[] {
+    try {
+        const raw = window.localStorage.getItem(REMINDER_STORAGE_KEY);
+        if (!raw) {
+            return [];
+        }
+
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) {
+            return [];
+        }
+
+        const normalized = parsed.flatMap((item) => {
+            if (!item || typeof item !== 'object') {
+                return [];
+            }
+
+            const title = typeof (item as { title?: unknown }).title === 'string'
+                ? (item as { title: string }).title.trim()
+                : '';
+            const scheduledFor = typeof (item as { scheduledFor?: unknown }).scheduledFor === 'string'
+                ? (item as { scheduledFor: string }).scheduledFor
+                : '';
+            const checkInId = typeof (item as { checkInId?: unknown }).checkInId === 'string'
+                ? (item as { checkInId: string }).checkInId
+                : '';
+
+            if (!title || !checkInId || !scheduledFor || !isValidDate(scheduledFor)) {
+                return [];
+            }
+
+            const createdAt = typeof (item as { createdAt?: unknown }).createdAt === 'string' && isValidDate((item as { createdAt: string }).createdAt)
+                ? (item as { createdAt: string }).createdAt
+                : new Date().toISOString();
+            const completedAt = typeof (item as { completedAt?: unknown }).completedAt === 'string' && isValidDate((item as { completedAt: string }).completedAt)
+                ? (item as { completedAt: string }).completedAt
+                : null;
+
+            return [{
+                id: typeof (item as { id?: unknown }).id === 'string'
+                    ? (item as { id: string }).id
+                    : `${checkInId}-${scheduledFor}`,
+                checkInId,
+                title,
+                note: typeof (item as { note?: unknown }).note === 'string' ? (item as { note: string }).note : '',
+                scheduledFor,
+                createdAt,
+                completedAt
+            }];
+        });
+
+        return sortReminders(normalized).slice(0, STORED_REMINDER_LIMIT);
+    } catch {
+        return [];
+    }
+}
+
+export function saveReminders(reminders: ReminderEntry[]): void {
+    window.localStorage.setItem(REMINDER_STORAGE_KEY, JSON.stringify(sortReminders(reminders).slice(0, STORED_REMINDER_LIMIT)));
 }
 
 export function mergeCheckInEntry(entries: CheckInEntry[], entry: CheckInEntry): {
@@ -177,6 +380,77 @@ export function mergeCheckInEntry(entries: CheckInEntry[], entry: CheckInEntry):
         activeEntry: entry,
         isDuplicate: false
     };
+}
+
+export function mergeReminderEntry(reminders: ReminderEntry[], reminder: ReminderEntry): {
+    reminders: ReminderEntry[];
+    reminder: ReminderEntry;
+    isDuplicate: boolean;
+} {
+    const existingReminder = reminders.find((item) => (
+        item.checkInId === reminder.checkInId &&
+        item.title === reminder.title &&
+        item.scheduledFor === reminder.scheduledFor &&
+        item.completedAt === reminder.completedAt
+    ));
+
+    if (existingReminder) {
+        return {
+            reminders,
+            reminder: existingReminder,
+            isDuplicate: true
+        };
+    }
+
+    const nextReminders = sortReminders([
+        reminder,
+        ...reminders.filter((item) => item.id !== reminder.id)
+    ]).slice(0, STORED_REMINDER_LIMIT);
+
+    return {
+        reminders: nextReminders,
+        reminder,
+        isDuplicate: false
+    };
+}
+
+export function toggleReminderCompletion(reminders: ReminderEntry[], reminderId: string): ReminderEntry[] {
+    return sortReminders(reminders.map((reminder) => {
+        if (reminder.id !== reminderId) {
+            return reminder;
+        }
+
+        return {
+            ...reminder,
+            completedAt: reminder.completedAt ? null : new Date().toISOString()
+        };
+    }));
+}
+
+export function getRemindersForCheckIn(reminders: ReminderEntry[], checkInId: string): ReminderEntry[] {
+    return reminders.filter((reminder) => reminder.checkInId === checkInId);
+}
+
+export function loadVisitSnapshot(): VisitSnapshot {
+    try {
+        const raw = window.localStorage.getItem(VISIT_SNAPSHOT_KEY);
+        if (!raw) {
+            return defaultVisitSnapshot;
+        }
+
+        const parsed = JSON.parse(raw) as Partial<VisitSnapshot>;
+        return {
+            lastSeenAt: typeof parsed.lastSeenAt === 'string' && isValidDate(parsed.lastSeenAt)
+                ? parsed.lastSeenAt
+                : null
+        };
+    } catch {
+        return defaultVisitSnapshot;
+    }
+}
+
+export function saveVisitSnapshot(snapshot: VisitSnapshot): void {
+    window.localStorage.setItem(VISIT_SNAPSHOT_KEY, JSON.stringify(snapshot));
 }
 
 export function loadTheme(): ThemeMode {
@@ -254,23 +528,57 @@ export function summarizeNote(note: string): string {
 }
 
 export function formatRelativeTime(timestamp: string): string {
-    const diff = Date.now() - new Date(timestamp).getTime();
-    const minutes = Math.round(diff / 60000);
-
-    if (minutes < 1) {
+    const targetTime = new Date(timestamp).getTime();
+    if (Number.isNaN(targetTime)) {
         return 'just now';
     }
+
+    const diff = targetTime - Date.now();
+    const future = diff > 0;
+    const minutes = Math.round(Math.abs(diff) / 60000);
+
+    if (minutes < 1) {
+        return future ? 'soon' : 'just now';
+    }
     if (minutes < 60) {
-        return `${minutes} min ago`;
+        return future ? `in ${minutes} min` : `${minutes} min ago`;
     }
 
     const hours = Math.round(minutes / 60);
     if (hours < 24) {
-        return `${hours} hr ago`;
+        return future ? `in ${hours} hr` : `${hours} hr ago`;
     }
 
     const days = Math.round(hours / 24);
-    return `${days} day${days === 1 ? '' : 's'} ago`;
+    return future
+        ? `in ${days} ${pluralize(days, 'day')}`
+        : `${days} ${pluralize(days, 'day')} ago`;
+}
+
+export function formatDateTime(timestamp: string): string {
+    return new Intl.DateTimeFormat(undefined, {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit'
+    }).format(new Date(timestamp));
+}
+
+export function formatCalendarMonth(timestamp: string | Date): string {
+    const value = timestamp instanceof Date ? timestamp : new Date(timestamp);
+
+    return new Intl.DateTimeFormat(undefined, {
+        month: 'long',
+        year: 'numeric'
+    }).format(value);
+}
+
+export function formatCalendarDay(dateKey: string): string {
+    return new Intl.DateTimeFormat(undefined, {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric'
+    }).format(fromCalendarDateKey(dateKey));
 }
 
 function toBase64(bytes: Uint8Array): string {
@@ -454,6 +762,141 @@ export function buildSupportRecommendation(note: string): SupportRecommendation 
     }
 
     return null;
+}
+
+export function buildProgressSummary(
+    entries: CheckInEntry[],
+    reminders: ReminderEntry[],
+    lastSeenAt: string | null,
+    now = new Date().toISOString()
+): ProgressSummary | null {
+    if (entries.length === 0 && reminders.length === 0) {
+        return null;
+    }
+
+    const nowTimestamp = new Date(now).getTime();
+    const pendingReminders = reminders.filter((reminder) => !reminder.completedAt);
+    const dueReminders = pendingReminders.filter((reminder) => new Date(reminder.scheduledFor).getTime() <= nowTimestamp);
+    const upcomingReminders = pendingReminders
+        .filter((reminder) => new Date(reminder.scheduledFor).getTime() > nowTimestamp)
+        .slice(0, 3);
+    const entriesSinceLastVisit = lastSeenAt
+        ? entries.filter((entry) => new Date(entry.createdAt).getTime() > new Date(lastSeenAt).getTime()).length
+        : 0;
+    const streakDays = getEntryStreak(entries);
+    const dominantMood = getDominantMood(getReferenceEntries(entries, lastSeenAt));
+    const lastEntryAt = entries[0]?.createdAt ?? null;
+
+    let headline = `${entries.length} saved ${pluralize(entries.length, 'check-in')} on this device`;
+
+    if (dueReminders.length > 0) {
+        headline = `${dueReminders.length} ${pluralize(dueReminders.length, 'reminder')} ready to revisit`;
+    } else if (lastSeenAt && entriesSinceLastVisit > 0) {
+        headline = `${entriesSinceLastVisit} new ${pluralize(entriesSinceLastVisit, 'check-in')} since your last visit`;
+    } else if (streakDays > 1) {
+        headline = `${streakDays}-day reflection streak`;
+    } else if (upcomingReminders.length > 0) {
+        headline = 'A reminder is already queued for you';
+    }
+
+    const detailParts: string[] = [];
+
+    if (streakDays > 0) {
+        detailParts.push(`${streakDays}-day streak`);
+    }
+
+    if (dominantMood) {
+        detailParts.push(`recent mood: ${moodContent[dominantMood].label.toLowerCase()}`);
+    }
+
+    if (dueReminders.length > 0) {
+        detailParts.push(`${dueReminders.length} due now`);
+    } else if (upcomingReminders[0]) {
+        detailParts.push(`next reminder ${formatRelativeTime(upcomingReminders[0].scheduledFor)}`);
+    } else if (lastEntryAt) {
+        detailParts.push(`last check-in ${formatRelativeTime(lastEntryAt)}`);
+    }
+
+    return {
+        headline,
+        detail: detailParts.join(' • '),
+        entriesSinceLastVisit,
+        streakDays,
+        dominantMood,
+        lastEntryAt,
+        dueReminders,
+        upcomingReminders
+    };
+}
+
+export function buildIcsCalendarExport(
+    entries: CheckInEntry[],
+    reminders: ReminderEntry[],
+    generatedAt = new Date().toISOString()
+): CalendarExport {
+    const dtStamp = formatIcsDate(generatedAt);
+    const entriesById = new Map(entries.map((entry) => [entry.id, entry]));
+    const eventBlocks: string[] = [];
+
+    entries.forEach((entry) => {
+        eventBlocks.push([
+            'BEGIN:VEVENT',
+            `UID:checkin-${entry.id}@happyzone.local`,
+            `DTSTAMP:${dtStamp}`,
+            `DTSTART:${formatIcsDate(entry.createdAt)}`,
+            `DTEND:${formatIcsDate(shiftMinutes(entry.createdAt, 15))}`,
+            `SUMMARY:${escapeIcsText(`HappyZone check-in: ${moodContent[entry.mood].label}`)}`,
+            `DESCRIPTION:${escapeIcsText(`Focus: ${focusContent[entry.focus].label}\nSummary: ${entry.summary}`)}`,
+            'CATEGORIES:HappyZone,Journal',
+            'END:VEVENT'
+        ].join('\r\n'));
+    });
+
+    reminders.forEach((reminder) => {
+        const entry = entriesById.get(reminder.checkInId);
+        const descriptionLines = [
+            reminder.note.trim() || 'Scheduled reminder from HappyZone.',
+            entry ? `Linked check-in: ${entry.summary}` : 'Linked check-in unavailable on this device.'
+        ];
+        const lines = [
+            'BEGIN:VEVENT',
+            `UID:reminder-${reminder.id}@happyzone.local`,
+            `DTSTAMP:${dtStamp}`,
+            `DTSTART:${formatIcsDate(reminder.scheduledFor)}`,
+            `DTEND:${formatIcsDate(shiftMinutes(reminder.scheduledFor, 30))}`,
+            `SUMMARY:${escapeIcsText(reminder.title)}`,
+            `DESCRIPTION:${escapeIcsText(descriptionLines.join('\n'))}`,
+            'CATEGORIES:HappyZone,Reminder'
+        ];
+
+        if (!reminder.completedAt) {
+            lines.push(
+                'BEGIN:VALARM',
+                'TRIGGER:-PT30M',
+                'ACTION:DISPLAY',
+                `DESCRIPTION:${escapeIcsText(reminder.title)}`,
+                'END:VALARM'
+            );
+        }
+
+        lines.push('END:VEVENT');
+        eventBlocks.push(lines.join('\r\n'));
+    });
+
+    return {
+        filename: `happyzone-calendar-${toCalendarDateKey(generatedAt).replace(/-/g, '')}.ics`,
+        content: [
+            'BEGIN:VCALENDAR',
+            'VERSION:2.0',
+            'PRODID:-//HappyZone//Private Check-in Calendar//EN',
+            'CALSCALE:GREGORIAN',
+            'METHOD:PUBLISH',
+            'X-WR-CALNAME:HappyZone',
+            ...eventBlocks,
+            'END:VCALENDAR',
+            ''
+        ].join('\r\n')
+    };
 }
 
 function detectDistortion(note: string): string {

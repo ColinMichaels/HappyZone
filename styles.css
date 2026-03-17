@@ -13,9 +13,9 @@
 
     --halo-bg: #F7F8F5;
     --halo-bg-elevated: #FFFFFF;
-    --halo-bg-soft: #EEF2EC;
-    --halo-bg-tint: #E7EBFF;
-    --halo-gradient-hero: linear-gradient(180deg, #FBFCF9 0%, #F4F6FF 100%);
+    --halo-bg-soft: #EEF1F7;
+    --halo-bg-tint: #E9EEFF;
+    --halo-gradient-hero: linear-gradient(180deg, #FBFCFA 0%, #F2F5FF 58%, #F6F1FF 100%);
 
     --halo-text: #1E2830;
     --halo-text-muted: #4D5B63;
@@ -29,6 +29,13 @@
 
     --halo-secondary: #E7EBFF;
     --halo-on-secondary: #2B397A;
+    --halo-accent-blue: #244A9C;
+    --halo-accent-purple: #6A4AA1;
+    --halo-accent-blue-soft: #E4ECFF;
+    --halo-accent-purple-soft: #F1EAFE;
+    --halo-calendar-entry: #244A9C;
+    --halo-calendar-reminder: #6A4AA1;
+    --halo-on-calendar-marker: #FFFFFF;
 
     --halo-link: #2F4BA3;
     --halo-focus-inner: #FFFFFF;
@@ -55,8 +62,8 @@
     --halo-mood-hopeful: #97A8FF;
     --halo-mood-steady: #8FB49D;
 
-    --halo-aura-1: rgba(81, 99, 201, 0.14);
-    --halo-aura-2: rgba(94, 118, 107, 0.12);
+    --halo-aura-1: rgba(36, 74, 156, 0.16);
+    --halo-aura-2: rgba(106, 74, 161, 0.12);
 
     --halo-radius-sm: 12px;
     --halo-radius-md: 18px;
@@ -84,9 +91,9 @@
 [data-theme="dark"] {
     --halo-bg: #101417;
     --halo-bg-elevated: #151B20;
-    --halo-bg-soft: #1B2329;
-    --halo-bg-tint: #1D264B;
-    --halo-gradient-hero: linear-gradient(180deg, #11161A 0%, #171D35 100%);
+    --halo-bg-soft: #1A212B;
+    --halo-bg-tint: #1B2752;
+    --halo-gradient-hero: linear-gradient(180deg, #11161A 0%, #16203D 52%, #221B3C 100%);
 
     --halo-text: #F2F6F8;
     --halo-text-muted: #B4C0C8;
@@ -100,6 +107,13 @@
 
     --halo-secondary: #1D264B;
     --halo-on-secondary: #D7DFFF;
+    --halo-accent-blue: #9DB5FF;
+    --halo-accent-purple: #C4AAFF;
+    --halo-accent-blue-soft: #1B2752;
+    --halo-accent-purple-soft: #2A1F40;
+    --halo-calendar-entry: #8FAFFF;
+    --halo-calendar-reminder: #C4AAFF;
+    --halo-on-calendar-marker: #101417;
 
     --halo-link: #C9DAFF;
     --halo-focus-inner: #101417;
@@ -126,8 +140,8 @@
     --halo-mood-hopeful: #B5C1FF;
     --halo-mood-steady: #A8D0B8;
 
-    --halo-aura-1: rgba(169, 183, 255, 0.18);
-    --halo-aura-2: rgba(168, 224, 205, 0.10);
+    --halo-aura-1: rgba(157, 181, 255, 0.20);
+    --halo-aura-2: rgba(196, 170, 255, 0.14);
 
     --halo-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.28);
     --halo-shadow-md: 0 14px 40px rgba(0, 0, 0, 0.34);
@@ -185,7 +199,9 @@ body {
     background-color: var(--halo-bg);
     background-image:
         radial-gradient(circle at top left, rgba(255, 255, 255, 0.58), transparent 32%),
-        linear-gradient(180deg, rgba(231, 235, 255, 0.28) 0%, rgba(247, 248, 245, 0) 28%);
+        radial-gradient(circle at top right, color-mix(in srgb, var(--halo-accent-blue) 12%, transparent), transparent 34%),
+        radial-gradient(circle at 14% 84%, color-mix(in srgb, var(--halo-accent-purple) 9%, transparent), transparent 28%),
+        linear-gradient(180deg, color-mix(in srgb, var(--halo-accent-blue-soft) 36%, transparent) 0%, rgba(247, 248, 245, 0) 32%);
     color: var(--halo-text);
     font-family: var(--halo-font-sans), sans-serif;
 }
@@ -196,6 +212,7 @@ body {
 
 button,
 a,
+input,
 textarea,
 summary {
     font: inherit;
@@ -254,9 +271,11 @@ summary::-webkit-details-marker {
 .focus-choice,
 .ritual-choice,
 .halo-history-card,
+.halo-inline-input,
 .halo-input,
 .halo-badge,
 .wizard-sticky-bar,
+.halo-icon-button,
 .halo-icon-link,
 .support-trigger-button,
 .support-resource-card {
@@ -270,15 +289,16 @@ summary::-webkit-details-marker {
 
 .halo-panel {
     border-radius: var(--halo-radius-lg);
-    border: 1px solid var(--halo-divider);
-    background: color-mix(in srgb, var(--halo-bg-elevated) 95%, transparent);
+    border: 1px solid color-mix(in srgb, var(--halo-accent-blue) 12%, var(--halo-divider));
+    background:
+        linear-gradient(180deg, color-mix(in srgb, var(--halo-accent-blue-soft) 22%, var(--halo-bg-elevated)) 0%, color-mix(in srgb, var(--halo-accent-purple-soft) 18%, var(--halo-bg-elevated)) 100%);
     box-shadow: var(--halo-shadow-md);
 }
 
 .halo-card {
     border-radius: var(--halo-radius-md);
-    border: 1px solid var(--halo-divider);
-    background: var(--halo-bg-elevated);
+    border: 1px solid color-mix(in srgb, var(--halo-accent-blue) 10%, var(--halo-divider));
+    background: linear-gradient(180deg, var(--halo-bg-elevated) 0%, color-mix(in srgb, var(--halo-accent-purple-soft) 10%, var(--halo-bg-elevated)) 100%);
     box-shadow: var(--halo-shadow-sm);
 }
 
@@ -392,8 +412,8 @@ summary::-webkit-details-marker {
     gap: 0.45rem;
     min-height: 2rem;
     border-radius: var(--halo-radius-pill);
-    border: 1px solid var(--halo-border);
-    background: var(--halo-bg);
+    border: 1px solid color-mix(in srgb, var(--halo-accent-blue) 18%, var(--halo-border));
+    background: linear-gradient(180deg, color-mix(in srgb, var(--halo-accent-blue-soft) 34%, var(--halo-bg-elevated)) 0%, var(--halo-bg) 100%);
     padding: 0.35rem 0.85rem;
     font-size: 0.72rem;
     font-weight: 700;
@@ -415,6 +435,64 @@ summary::-webkit-details-marker {
     font-weight: 700;
     text-decoration: none;
     color: var(--halo-heading);
+}
+
+.halo-icon-button {
+    display: inline-grid;
+    height: 2.5rem;
+    width: 2.5rem;
+    place-items: center;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--halo-accent-blue) 24%, var(--halo-border));
+    background: linear-gradient(180deg, color-mix(in srgb, var(--halo-accent-blue-soft) 42%, var(--halo-bg-elevated)) 0%, var(--halo-bg) 100%);
+    box-shadow: var(--halo-shadow-sm);
+    color: var(--halo-heading);
+}
+
+.halo-icon-button:hover,
+.halo-icon-link:hover {
+    background: var(--halo-bg-soft);
+}
+
+.halo-icon-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.56;
+    transform: none;
+}
+
+.icon-action {
+    position: relative;
+    display: inline-flex;
+}
+
+.icon-action-tooltip {
+    position: absolute;
+    top: calc(100% + 0.55rem);
+    right: 0;
+    z-index: 10;
+    border-radius: 0.75rem;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--halo-accent-blue) 88%, var(--halo-heading)) 0%, color-mix(in srgb, var(--halo-accent-purple) 78%, var(--halo-heading)) 100%);
+    padding: 0.45rem 0.65rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1.2;
+    white-space: nowrap;
+    color: var(--halo-bg-elevated);
+    box-shadow: var(--halo-shadow-md);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-0.2rem);
+    transition:
+        opacity var(--halo-duration-fast) var(--halo-ease),
+        transform var(--halo-duration-fast) var(--halo-ease);
+    transition-delay: 0ms;
+}
+
+.icon-action:hover .icon-action-tooltip,
+.icon-action:focus-within .icon-action-tooltip {
+    opacity: 1;
+    transform: translateY(0);
+    transition-delay: 320ms;
 }
 
 .theme-toggle {
@@ -617,6 +695,7 @@ summary::-webkit-details-marker {
 .focus-choice:hover,
 .ritual-choice:hover,
 .halo-history-card:hover,
+.halo-icon-button:hover,
 .halo-icon-link:hover {
     transform: translateY(-1px);
     border-color: var(--halo-primary);
@@ -814,6 +893,17 @@ details[open] .learn-more-toggle {
     color: var(--halo-text);
 }
 
+.halo-inline-input {
+    min-height: var(--halo-control-height);
+    width: 100%;
+    border-radius: var(--halo-radius-pill);
+    border: 1px solid color-mix(in srgb, var(--halo-accent-blue) 18%, var(--halo-border-control));
+    background: color-mix(in srgb, var(--halo-accent-blue-soft) 18%, var(--halo-bg));
+    padding: 0.7rem 1rem;
+    font-size: 0.95rem;
+    color: var(--halo-text);
+}
+
 .halo-input-prominent {
     min-height: 18rem;
 }
@@ -835,6 +925,230 @@ details[open] .learn-more-toggle {
     padding: 1rem 1.05rem;
     box-shadow: var(--halo-shadow-lg);
     backdrop-filter: blur(12px);
+}
+
+.progress-summary-grid {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.progress-stat-card,
+.progress-reminder-card,
+.calendar-detail-panel,
+.reminder-card {
+    border-radius: var(--halo-radius-md);
+    border: 1px solid color-mix(in srgb, var(--halo-accent-purple) 12%, var(--halo-divider));
+    background: linear-gradient(180deg, color-mix(in srgb, var(--halo-accent-blue-soft) 24%, var(--halo-bg-elevated)) 0%, color-mix(in srgb, var(--halo-accent-purple-soft) 22%, var(--halo-bg-elevated)) 100%);
+    box-shadow: var(--halo-shadow-sm);
+}
+
+.progress-stat-card {
+    padding: 1rem;
+}
+
+.progress-stat-value {
+    margin: 0.35rem 0 0;
+    font-family: var(--halo-font-display), sans-serif;
+    font-size: clamp(1.7rem, 5vw, 2.1rem);
+    line-height: 1;
+    color: var(--halo-heading);
+}
+
+.progress-stat-label {
+    font-size: clamp(1.1rem, 3.8vw, 1.35rem);
+    line-height: 1.2;
+}
+
+.progress-reminder-list,
+.calendar-detail-list,
+.reminder-list {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.progress-reminder-card,
+.reminder-card {
+    padding: 1rem;
+}
+
+.progress-reminder-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.calendar-toolbar {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.calendar-month-label {
+    margin: 0;
+    font-family: var(--halo-font-display), sans-serif;
+    font-size: 1.1rem;
+    line-height: 1.2;
+    text-align: center;
+    color: var(--halo-heading);
+}
+
+.calendar-weekday-row {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 0.4rem;
+}
+
+.calendar-weekday-label {
+    text-align: center;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--halo-text-soft);
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 0.4rem;
+}
+
+.calendar-day-cell {
+    display: flex;
+    min-height: 4.5rem;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: space-between;
+    border-radius: 1rem;
+    border: 1px solid color-mix(in srgb, var(--halo-accent-blue) 14%, var(--halo-divider));
+    background: linear-gradient(180deg, color-mix(in srgb, var(--halo-accent-blue-soft) 20%, var(--halo-bg-elevated)) 0%, var(--halo-bg) 100%);
+    padding: 0.55rem;
+    text-align: left;
+    box-shadow: var(--halo-shadow-sm);
+}
+
+.calendar-day-cell:hover {
+    transform: translateY(-1px);
+    border-color: var(--halo-primary);
+}
+
+.calendar-day-cell[data-selected="true"] {
+    border-color: color-mix(in srgb, var(--halo-accent-purple) 44%, var(--halo-primary));
+    background: linear-gradient(180deg, color-mix(in srgb, var(--halo-accent-blue-soft) 62%, var(--halo-bg-elevated)) 0%, color-mix(in srgb, var(--halo-accent-purple-soft) 54%, var(--halo-bg-elevated)) 100%);
+}
+
+.calendar-day-cell[data-today="true"] {
+    box-shadow:
+        inset 0 0 0 1px color-mix(in srgb, var(--halo-primary) 60%, var(--halo-divider)),
+        var(--halo-shadow-sm);
+}
+
+.calendar-day-cell[data-muted="true"] {
+    background: linear-gradient(180deg, color-mix(in srgb, var(--halo-bg-soft) 82%, var(--halo-bg-elevated)) 0%, color-mix(in srgb, var(--halo-bg) 92%, var(--halo-bg-elevated)) 100%);
+}
+
+.calendar-day-cell[data-muted="true"] .calendar-day-number {
+    color: var(--halo-text-soft);
+}
+
+.calendar-day-number {
+    font-family: var(--halo-font-display), sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--halo-heading);
+}
+
+.calendar-day-indicators {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    min-height: 1rem;
+}
+
+.calendar-day-indicator {
+    display: inline-flex;
+    min-width: 1.2rem;
+    height: 1.2rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    padding: 0 0.28rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--halo-on-calendar-marker);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--halo-bg-elevated) 82%, transparent), var(--halo-shadow-sm);
+}
+
+.calendar-day-indicator[data-kind="entry"] {
+    background: var(--halo-calendar-entry);
+}
+
+.calendar-day-indicator[data-kind="reminder"] {
+    background: var(--halo-calendar-reminder);
+}
+
+.calendar-detail-panel {
+    padding: 1rem;
+}
+
+.reminder-form-grid {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.reminder-note-input {
+    min-height: 7rem;
+}
+
+.reminder-form-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.reminder-count-chip {
+    position: relative;
+    display: inline-flex;
+    min-height: 2.6rem;
+    align-items: center;
+    border-radius: var(--halo-radius-pill);
+    border: 1px solid color-mix(in srgb, var(--halo-accent-purple) 22%, var(--halo-border));
+    background: linear-gradient(180deg, color-mix(in srgb, var(--halo-accent-purple-soft) 70%, var(--halo-bg-elevated)) 0%, color-mix(in srgb, var(--halo-accent-blue-soft) 38%, var(--halo-bg)) 100%);
+    padding: 0.55rem 1rem;
+    box-shadow: var(--halo-shadow-sm);
+}
+
+.reminder-count-chip-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--halo-heading);
+}
+
+.reminder-count-chip-badge {
+    position: absolute;
+    top: -0.35rem;
+    right: -0.3rem;
+    display: inline-flex;
+    min-width: 1.45rem;
+    height: 1.45rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: linear-gradient(180deg, var(--halo-calendar-reminder) 0%, color-mix(in srgb, var(--halo-calendar-reminder) 78%, var(--halo-accent-blue)) 100%);
+    padding: 0 0.35rem;
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: var(--halo-on-calendar-marker);
+    box-shadow: 0 0 0 2px var(--halo-bg-elevated), var(--halo-shadow-sm);
+}
+
+.reminder-card[data-completed="true"] {
+    background: color-mix(in srgb, var(--halo-success-bg) 64%, var(--halo-bg-elevated));
 }
 
 .halo-history-card {
@@ -1211,8 +1525,10 @@ details[open] .learn-more-toggle {
     .theme-toggle,
     .halo-button-primary,
     .halo-button-secondary,
+    .halo-icon-button,
     .support-trigger-button,
     .support-toggle,
+    .halo-inline-input,
     .prompt-chip-button,
     .halo-input,
     .mood-choice,
@@ -1223,7 +1539,8 @@ details[open] .learn-more-toggle {
     .support-resource-card,
     .learn-more-summary,
     .suggested-starts-summary,
-    .tool-switch
+    .tool-switch,
+    .calendar-day-cell
 ):focus-visible {
     outline: none;
     box-shadow:
@@ -1247,6 +1564,25 @@ details[open] .learn-more-toggle {
         grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
+    .progress-summary-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .calendar-toolbar {
+        max-width: 18rem;
+        margin-inline: auto;
+    }
+
+    .reminder-form-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .reminder-form-actions {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+    }
+
     .wizard-sticky-bar {
         flex-direction: row;
         align-items: center;
@@ -1268,9 +1604,24 @@ details[open] .learn-more-toggle {
     .support-preference-row,
     .support-resource-card,
     .reframer-actions,
-    .grounding-step-card {
+    .grounding-step-card,
+    .progress-reminder-card {
         flex-direction: column;
         align-items: stretch;
+    }
+
+    .calendar-grid,
+    .calendar-weekday-row {
+        gap: 0.25rem;
+    }
+
+    .calendar-day-cell {
+        min-height: 3.8rem;
+        padding: 0.4rem;
+    }
+
+    .calendar-day-number {
+        font-size: 0.82rem;
     }
 
     .reframer-actions-end {
