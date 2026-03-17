@@ -1,4 +1,5 @@
 import { crisisPatterns, defaultFocusByMood, focusContent, moodContent, moodKeywords, supportSignalPatterns } from '../content';
+import { BRAND_CONFIG } from '../brandConfig';
 import type {
     BuiltPlan,
     CalendarExport,
@@ -480,6 +481,14 @@ export function loadTheme(): ThemeMode {
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
+export function prefersReducedMotion(): boolean {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+        return false;
+    }
+
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
 export function loadDisclaimerAcknowledged(): boolean {
     try {
         return window.localStorage.getItem(DISCLAIMER_ACK_KEY) === 'true';
@@ -809,8 +818,6 @@ export function buildProgressSummary(
         headline = `${entriesSinceLastVisit} new ${pluralize(entriesSinceLastVisit, 'check-in')} since your last visit`;
     } else if (streakDays > 1) {
         headline = `${streakDays}-day reflection streak`;
-    } else if (upcomingReminders.length > 0) {
-        headline = 'A reminder is already queued for you';
     }
 
     const detailParts: string[] = [];
@@ -859,9 +866,9 @@ export function buildIcsCalendarExport(
             `DTSTAMP:${dtStamp}`,
             `DTSTART:${formatIcsDate(entry.createdAt)}`,
             `DTEND:${formatIcsDate(shiftMinutes(entry.createdAt, 15))}`,
-            `SUMMARY:${escapeIcsText(`HappyZone check-in: ${moodContent[entry.mood].label}`)}`,
+            `SUMMARY:${escapeIcsText(`${BRAND_CONFIG.name} check-in: ${moodContent[entry.mood].label}`)}`,
             `DESCRIPTION:${escapeIcsText(`Focus: ${focusContent[entry.focus].label}\nSummary: ${entry.summary}`)}`,
-            'CATEGORIES:HappyZone,Journal',
+            `CATEGORIES:${BRAND_CONFIG.name},Journal`,
             'END:VEVENT'
         ].join('\r\n'));
     });
@@ -869,7 +876,7 @@ export function buildIcsCalendarExport(
     reminders.forEach((reminder) => {
         const entry = entriesById.get(reminder.checkInId);
         const descriptionLines = [
-            reminder.note.trim() || 'Scheduled reminder from HappyZone.',
+            reminder.note.trim() || `Scheduled reminder from ${BRAND_CONFIG.name}.`,
             entry ? `Linked check-in: ${entry.summary}` : 'Linked check-in unavailable on this device.'
         ];
         const lines = [
@@ -880,7 +887,7 @@ export function buildIcsCalendarExport(
             `DTEND:${formatIcsDate(shiftMinutes(reminder.scheduledFor, 30))}`,
             `SUMMARY:${escapeIcsText(reminder.title)}`,
             `DESCRIPTION:${escapeIcsText(descriptionLines.join('\n'))}`,
-            'CATEGORIES:HappyZone,Reminder'
+            `CATEGORIES:${BRAND_CONFIG.name},Reminder`
         ];
 
         if (!reminder.completedAt) {
@@ -898,14 +905,14 @@ export function buildIcsCalendarExport(
     });
 
     return {
-        filename: `happyzone-calendar-${toCalendarDateKey(generatedAt).replace(/-/g, '')}.ics`,
+        filename: `${BRAND_CONFIG.name.toLowerCase().replace(/\s+/g, '-')}-calendar-${toCalendarDateKey(generatedAt).replace(/-/g, '')}.ics`,
         content: [
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
-            'PRODID:-//HappyZone//Private Check-in Calendar//EN',
+            `PRODID:-//${BRAND_CONFIG.name}//Private Check-in Calendar//EN`,
             'CALSCALE:GREGORIAN',
             'METHOD:PUBLISH',
-            'X-WR-CALNAME:HappyZone',
+            `X-WR-CALNAME:${BRAND_CONFIG.name}`,
             ...eventBlocks,
             'END:VCALENDAR',
             ''

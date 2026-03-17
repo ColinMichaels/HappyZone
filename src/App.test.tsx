@@ -1,7 +1,9 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { vi } from 'vitest';
 
 import App from './App';
+import { BreathingReset } from './components/BreathingReset';
 import { loadCheckIns, loadReminders, saveCheckIns, saveReminders, saveVisitSnapshot } from './lib/happyzone';
 
 async function moveToJournalStep(user: ReturnType<typeof userEvent.setup>) {
@@ -9,6 +11,19 @@ async function moveToJournalStep(user: ReturnType<typeof userEvent.setup>) {
     await user.click(screen.getByRole('radio', { name: /anxious/i }));
     await user.click(screen.getByRole('button', { name: /^next$/i }));
     await user.click(screen.getByRole('button', { name: /^next$/i }));
+}
+
+function setReducedMotionPreference(enabled: boolean) {
+    vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
+        matches: query === '(prefers-reduced-motion: reduce)' ? enabled : false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn()
+    }));
 }
 
 describe('App regression coverage', () => {
@@ -26,7 +41,7 @@ describe('App regression coverage', () => {
 
         expect(await screen.findByRole('heading', { name: /three short lines/i })).toBeInTheDocument();
         expect(screen.getByText(/this may be catastrophizing/i)).toBeInTheDocument();
-        expect(screen.getByRole('heading', { name: /^mood$/i })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: /how are you feeling/i })).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: /generate plan/i })).not.toBeInTheDocument();
         expect(loadCheckIns()).toHaveLength(1);
     });
@@ -106,7 +121,7 @@ describe('App regression coverage', () => {
         await user.type(within(dialog).getByRole('textbox'), 'This is hard, but I can take one next step.');
         await user.click(within(dialog).getByRole('button', { name: /add to journal/i }));
 
-        expect(screen.getByRole('heading', { name: /^journal$/i })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: /write it out/i })).toBeInTheDocument();
         expect(screen.getByLabelText(/what is happening right now/i)).toHaveValue(
             'Balanced truth: This is hard, but I can take one next step.'
         );
@@ -141,9 +156,7 @@ describe('App regression coverage', () => {
 
         await user.click(screen.getByRole('button', { name: /i understand/i }));
 
-        expect(screen.getByRole('heading', { name: /welcome back/i })).toBeInTheDocument();
-        expect(screen.getByText(/1 reminder ready to revisit/i)).toBeInTheDocument();
-        expect(screen.getByRole('link', { name: /view calendar/i })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: /1 reminder ready to revisit/i })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /open plan/i })).toBeInTheDocument();
     });
 
@@ -172,6 +185,12 @@ describe('App regression coverage', () => {
         render(<App />);
 
         await user.click(screen.getByRole('button', { name: /i understand/i }));
+
+        const planTab = screen.queryByRole('tab', { name: /plan/i, hidden: true });
+        if (planTab) {
+            await user.click(planTab);
+        }
+
         await user.click(screen.getByRole('heading', { name: /designed for a calm mind/i }));
         await user.click(screen.getByRole('button', { name: /reset saved data/i }));
         await user.click(screen.getByRole('button', { name: /clear saved data/i }));
@@ -180,5 +199,34 @@ describe('App regression coverage', () => {
         expect(loadCheckIns()).toEqual([]);
         expect(loadReminders()).toEqual([]);
         expect(screen.getByText(/your recent check-ins will appear here/i)).toBeInTheDocument();
+    });
+
+    it('respects reduced-motion preferences when scrolling to the generated plan', async () => {
+        const user = userEvent.setup();
+
+        setReducedMotionPreference(true);
+        render(<App />);
+
+        await moveToJournalStep(user);
+        await user.type(
+            screen.getByLabelText(/what is happening right now/i),
+            'I want a short plan without animated scrolling getting in the way.'
+        );
+
+        await user.click(screen.getByRole('button', { name: /generate plan/i }));
+
+        await screen.findByRole('heading', { name: /three short lines/i });
+        await waitFor(() => expect(window.HTMLElement.prototype.scrollIntoView).toHaveBeenCalledWith({
+            behavior: 'auto',
+            block: 'start'
+        }));
+    });
+
+    it('keeps the breathing orb static when reduced motion is preferred', () => {
+        setReducedMotionPreference(true);
+        render(<BreathingReset instruction="Use the breath count only." />);
+
+        expect(screen.getByText(/motion reduced\. follow the timer and breath label without the orb expanding\./i)).toBeInTheDocument();
+        expect(document.querySelector('.halo-orb')).toHaveAttribute('data-reduced-motion', 'true');
     });
 });

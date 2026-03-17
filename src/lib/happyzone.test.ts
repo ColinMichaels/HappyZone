@@ -22,6 +22,7 @@ import {
     saveVisitSnapshot,
     trackSupportAnalytics
 } from './happyzone';
+import { BRAND_CONFIG } from '../brandConfig';
 
 describe('happyzone logic', () => {
     it('detects support-signal language from journal text', () => {
@@ -172,9 +173,9 @@ describe('happyzone logic', () => {
 
         const calendarExport = buildIcsCalendarExport(entries, reminders, '2026-03-16T12:00:00.000Z');
 
-        expect(calendarExport.filename).toBe('happyzone-calendar-20260316.ics');
+        expect(calendarExport.filename).toBe(`${BRAND_CONFIG.name.toLowerCase().replace(/\s+/g, '-')}-calendar-20260316.ics`);
         expect(calendarExport.content).toContain('BEGIN:VCALENDAR');
-        expect(calendarExport.content).toContain('SUMMARY:HappyZone check-in: Anxious');
+        expect(calendarExport.content).toContain(`SUMMARY:${BRAND_CONFIG.name} check-in: Anxious`);
         expect(calendarExport.content).toContain('SUMMARY:Revisit your calm plan');
         expect(calendarExport.content).toContain('BEGIN:VALARM');
     });

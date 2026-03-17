@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { BREATHING_STEPS } from '../content';
+import { prefersReducedMotion } from '../lib/happyzone';
 
 interface BreathingResetProps {
     instruction: string;
@@ -10,6 +11,7 @@ export function BreathingReset({ instruction }: BreathingResetProps) {
     const [isRunning, setIsRunning] = useState(false);
     const [stepIndex, setStepIndex] = useState(0);
     const [secondsLeft, setSecondsLeft] = useState<number>(BREATHING_STEPS[0].seconds);
+    const reducedMotion = prefersReducedMotion();
 
     useEffect(() => {
         setIsRunning(false);
@@ -64,13 +66,21 @@ export function BreathingReset({ instruction }: BreathingResetProps) {
                 </button>
             </div>
 
-            <div className="mt-5 flex flex-col items-center gap-4 rounded-halo-md border border-halo-divider bg-halo-bg-soft px-5 py-6 text-center">
-                <div className="halo-orb" style={{ ['--breath-scale' as string]: activeStep.scale }}>
+            <div className="mt-5 flex flex-col items-center gap-4 rounded-halo-md border border-halo-divider bg-halo-bg-soft px-4 py-4 text-center">
+                <div
+                    className="halo-orb"
+                    data-reduced-motion={reducedMotion}
+                    style={reducedMotion ? undefined : { ['--breath-scale' as string]: activeStep.scale }}
+                >
                     <span className="font-display text-4xl text-halo-heading">{secondsLeft}</span>
                 </div>
                 <div>
                     <p className="font-semibold text-halo-heading">{activeStep.label}</p>
-                    <p className="halo-helper-text mt-1">Use the longer exhale to downshift your body before you think about fixing the whole day.</p>
+                    <p className="halo-helper-text mt-1">
+                        {reducedMotion
+                            ? 'Motion reduced. Follow the timer and breath label without the orb expanding.'
+                            : 'Use the longer exhale to downshift your body before you think about fixing the whole day.'}
+                    </p>
                 </div>
             </div>
         </section>

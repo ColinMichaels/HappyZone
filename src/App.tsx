@@ -31,6 +31,7 @@ import {
     loadVisitSnapshot,
     mergeCheckInEntry,
     mergeReminderEntry,
+    prefersReducedMotion,
     resolveFocusFromMood,
     saveCheckIns,
     saveDisclaimerAcknowledged,
@@ -42,6 +43,7 @@ import {
     trackSupportAnalytics
 } from './lib/happyzone';
 import { utilityIcons } from './lib/materialIcons';
+import { BRAND_CONFIG } from './brandConfig';
 import type { CheckInEntry, MoodKey, ReminderEntry, StatusState, SupportFocus, ThemeMode, WizardStep } from './types';
 
 interface FormStatus {
@@ -54,6 +56,8 @@ interface AppBootstrap {
     reminders: ReminderEntry[];
     lastSeenAt: string | null;
 }
+
+type WorkspaceView = 'checkin' | 'plan' | 'calendar' | 'tools' | 'history';
 
 const emptyStatus: FormStatus = {
     message: '',
@@ -96,11 +100,19 @@ export default function App() {
     const [personalizedSupportRecommendations, setPersonalizedSupportRecommendations] = useState(false);
     const [promptIndex, setPromptIndex] = useState(() => new Date().getDate() % promptDeck.length);
     const [calendarExportStatus, setCalendarExportStatus] = useState('');
+    const [mobileView, setMobileView] = useState<WorkspaceView>(() => (bootstrap.checkIns[0] ? 'plan' : 'checkin'));
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    const isWizardActive = mobileView === 'checkin';
+    const isProgressionActive = isWizardActive && step !== 'mood';
 
     useEffect(() => {
         applyTheme(theme);
     }, [theme]);
+
+    useEffect(() => {
+        document.title = `${BRAND_CONFIG.name} | ${BRAND_CONFIG.tagline}`;
+    }, []);
 
     useEffect(() => {
         saveVisitSnapshot({
@@ -146,6 +158,38 @@ export default function App() {
     const breathingInstruction = focusContent[activeFocus].resetCue;
     const WarningIcon = utilityIcons.warning;
     const activeEntryReminders = activeEntry ? getRemindersForCheckIn(reminders, activeEntry.id) : [];
+    const workspaceTabs = [
+        {
+            view: 'checkin' as const,
+            label: 'Check-in',
+            icon: utilityIcons.journal,
+            badge: null
+        },
+        {
+            view: 'plan' as const,
+            label: 'Plan',
+            icon: utilityIcons.plan,
+            badge: activeEntryReminders.length > 0 ? activeEntryReminders.length : null
+        },
+        {
+            view: 'calendar' as const,
+            label: 'Calendar',
+            icon: utilityIcons.calendar,
+            badge: reminders.length > 0 ? reminders.length : null
+        },
+        {
+            view: 'tools' as const,
+            label: 'Tools',
+            icon: utilityIcons.calmingTools,
+            badge: null
+        },
+        {
+            view: 'history' as const,
+            label: 'History',
+            icon: utilityIcons.history,
+            badge: checkIns.length > 0 ? checkIns.length : null
+        }
+    ];
 
     const moodItems = (Object.keys(moodContent) as MoodKey[]).map((key) => ({
         value: key,
@@ -160,14 +204,20 @@ export default function App() {
     }));
 
     function focusJournalSoon() {
+        setMobileView('checkin');
         window.setTimeout(() => textareaRef.current?.focus(), 0);
     }
 
-    function focusPlanSoon() {
-        window.setTimeout(() => document.getElementById('planOutput')?.scrollIntoView({
-            behavior: 'smooth',
+    function focusSectionSoon(sectionId: string, nextView: WorkspaceView) {
+        setMobileView(nextView);
+        window.setTimeout(() => document.getElementById(sectionId)?.scrollIntoView({
+            behavior: prefersReducedMotion() ? 'auto' : 'smooth',
             block: 'start'
         }), 0);
+    }
+
+    function focusPlanSoon() {
+        focusSectionSoon('planOutput', 'plan');
     }
 
     function openEntry(entry: CheckInEntry, message: string) {
@@ -228,6 +278,7 @@ export default function App() {
         setIsThoughtReframerOpen(false);
         setStatus(nextStatus);
         setStep('mood');
+        setMobileView('checkin');
     }
 
     function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -374,164 +425,252 @@ export default function App() {
             <div className="halo-aura halo-aura-one"></div>
             <div className="halo-aura halo-aura-two"></div>
 
-            <div className="relative mx-auto flex min-h-screen w-full max-w-2xl flex-col px-4 py-4 sm:px-6 sm:py-6">
-                <Header theme={theme} onThemeChange={setTheme} />
+            <div className="app-frame relative mx-auto flex min-h-screen w-full flex-col px-0 py-0 sm:px-6 sm:py-6">
+                <Header theme={theme} onThemeChange={setTheme} minimal={isWizardActive} />
 
-                <main className="mt-4 grid gap-4">
-                    <ProgressSummaryPanel
-                        summary={progressSummary}
-                        onOpenReminder={handleOpenReminder}
-                        onToggleReminder={handleToggleReminder}
-                    />
+                <main className="app-main mt-4">
+                    {!isWizardActive && (
+                        <div className="app-summary-row">
+                            <ProgressSummaryPanel
+                                summary={progressSummary}
+                                onOpenReminder={handleOpenReminder}
+                                onToggleReminder={handleToggleReminder}
+                            />
+                        </div>
+                    )}
 
-                    <form className="wizard-flow" onSubmit={handleSubmit} noValidate>
-                        {step === 'mood' ? (
-                            <section className="halo-panel wizard-step px-5 py-5 sm:px-6">
-                                <div className="space-y-2">
-                                    <p className="halo-eyebrow">Step 1 of 3</p>
-                                    <h2 className="halo-section-title">Mood</h2>
-                                    <p className="halo-helper-text">Choose the feeling that fits best, or move on and let the journal speak first.</p>
-                                </div>
+                    {!isProgressionActive && (
+                        <nav className="mobile-workspace-nav" aria-label="Workspace sections" role="tablist">
+                            {workspaceTabs.map((tab) => {
+                                const TabIcon = tab.icon;
 
-                                <div className="mt-5">
-                                    <ChoiceGrid
-                                        ariaLabel="Mood selection"
-                                        items={moodItems}
-                                        selectedValue={selectedMood}
-                                        variant="mood"
-                                        onSelect={(value) => handleSelectMood(value as MoodKey)}
-                                    />
-                                </div>
-
-                                <div className="wizard-actions mt-5">
-                                    <p className="halo-helper-text">Selections stay editable as you move through the check-in.</p>
-                                    <button className="halo-button-primary" onClick={() => setStep('support')} type="button">Next</button>
-                                </div>
-                            </section>
-                        ) : null}
-
-                        {step === 'support' ? (
-                            <section className="halo-panel wizard-step px-5 py-5 sm:px-6">
-                                <div className="space-y-2">
-                                    <p className="halo-eyebrow">Step 2 of 3</p>
-                                    <h2 className="halo-section-title">Support</h2>
-                                    <p className="halo-helper-text">
-                                        {selectedMood ? `Mood selected: ${moodContent[selectedMood].label}.` : 'No mood selected. You can keep this flexible.'}
-                                    </p>
-                                </div>
-
-                                <div className="mt-5">
-                                    <ChoiceGrid
-                                        ariaLabel="Support selection"
-                                        items={focusItems}
-                                        selectedValue={selectedFocus}
-                                        variant="focus"
-                                        onSelect={(value) => handleSelectFocus(value as SupportFocus)}
-                                    />
-                                </div>
-
-                                <div className="wizard-actions wizard-actions-between mt-5">
-                                    <button className="halo-button-secondary" onClick={() => setStep('mood')} type="button">Back</button>
+                                return (
                                     <button
-                                        className="halo-button-primary"
-                                        onClick={() => {
-                                            setStep('journal');
-                                            focusJournalSoon();
-                                        }}
+                                        key={tab.view}
+                                        id={`workspace-tab-${tab.view}`}
+                                        aria-label={tab.label}
+                                        aria-controls={`workspace-panel-${tab.view}`}
+                                        aria-selected={mobileView === tab.view}
+                                        className="mobile-workspace-tab"
+                                        data-active={mobileView === tab.view}
+                                        onClick={() => setMobileView(tab.view)}
+                                        role="tab"
                                         type="button"
                                     >
-                                        Next
+                                        <span className="mobile-workspace-tab-icon-wrap">
+                                            <TabIcon className="utility-icon" aria-hidden="true" />
+                                            {tab.badge ? (
+                                                <span className="mobile-workspace-tab-badge" aria-hidden="true">
+                                                    {Math.min(tab.badge, 99)}
+                                                </span>
+                                            ) : null}
+                                        </span>
+                                        <span className="mobile-workspace-tab-label">{tab.label}</span>
                                     </button>
-                                </div>
-                            </section>
-                        ) : null}
+                                );
+                            })}
+                        </nav>
+                    )}
 
-                        {step === 'journal' ? (
-                            <JournalStep
-                                selectedMoodLabel={selectedMoodLabel}
-                                selectedFocusLabel={selectedFocusLabel}
-                                prompt={promptDeck[promptIndex]}
-                                prompts={writingPrompts}
-                                rituals={ritualActions}
-                                note={note}
-                                statusMessage={status.message}
-                                statusState={status.state}
-                                textareaRef={textareaRef}
-                                onBack={() => setStep('support')}
-                                onNoteChange={handleNoteChange}
-                                onShufflePrompt={() => setPromptIndex((current) => (current + 1) % promptDeck.length)}
-                                onApplyPrompt={appendSeed}
-                                onApplyRitual={(ritual) => handleApplyRitual(ritual.focus, ritual.noteSeed, ritual.title)}
-                                onOpenThoughtReframer={() => setIsThoughtReframerOpen(true)}
-                            />
-                        ) : null}
+                    <div className="app-columns">
+                        <div className="app-primary-column">
+                            <div
+                                id="workspace-panel-checkin"
+                                aria-labelledby="workspace-tab-checkin"
+                                className="workspace-panel"
+                                data-mobile-active={mobileView === 'checkin'}
+                                role="tabpanel"
+                            >
+                                <form className="wizard-flow" onSubmit={handleSubmit} noValidate>
+                                    {step === 'mood' ? (
+                                        <section className="halo-panel wizard-step px-4 py-4 sm:px-6">
+                                            <div className="space-y-2">
+                                                <h2 className="halo-section-title">How are you feeling?</h2>
+                                            </div>
 
-                        {step === 'journal' && noteLength > 0 ? (
-                            <div className="wizard-sticky-bar">
-                                <div>
-                                    <p className="halo-field-label">Ready when you are</p>
-                                    <p className="text-sm leading-6 text-halo-muted">
-                                        {noteLength >= 12
-                                            ? 'Generate a grounded plan from this check-in.'
-                                            : 'Write a little more so the plan has enough signal.'}
-                                    </p>
-                                </div>
-                                <div className="flex shrink-0 items-center gap-3">
-                                    {supportSignalDetected ? (
-                                        <button
-                                            className="support-trigger-button"
-                                            aria-controls="supportModal"
-                                            aria-expanded={isSupportModalOpen}
-                                            aria-haspopup="dialog"
-                                            onClick={() => {
-                                                setIsSupportModalOpen(true);
-                                                trackSupportAnalytics('modal-opened');
-                                            }}
-                                            type="button"
-                                        >
-                                            <WarningIcon className="button-icon" aria-hidden="true" />
-                                            Get support
-                                        </button>
+                                            <div className="mt-5">
+                                                <ChoiceGrid
+                                                    ariaLabel="Mood selection"
+                                                    items={moodItems}
+                                                    selectedValue={selectedMood}
+                                                    variant="mood"
+                                                    onSelect={(value) => handleSelectMood(value as MoodKey)}
+                                                />
+                                            </div>
+
+                                            <div className="wizard-actions mt-5">
+                                                <button className="halo-button-primary" onClick={() => setStep('support')} type="button">Next</button>
+                                            </div>
+                                        </section>
                                     ) : null}
-                                    <button className="halo-button-primary" disabled={noteLength < 12} type="submit">Generate plan</button>
-                                    <button className="halo-button-secondary" onClick={clearForm} type="button">Clear</button>
-                                </div>
+
+                                    {step === 'support' ? (
+                                        <section className="halo-panel wizard-step px-4 py-4 sm:px-6">
+                                            <div className="space-y-2">
+                                                <h2 className="halo-section-title">What do you need right now?</h2>
+                                            </div>
+
+                                            <div className="mt-5">
+                                                <ChoiceGrid
+                                                    ariaLabel="Support selection"
+                                                    items={focusItems}
+                                                    selectedValue={selectedFocus}
+                                                    variant="focus"
+                                                    onSelect={(value) => handleSelectFocus(value as SupportFocus)}
+                                                />
+                                            </div>
+
+                                            <div className="wizard-actions wizard-actions-between mt-5">
+                                                <button className="halo-button-secondary" onClick={() => setStep('mood')} type="button">Back</button>
+                                                <button
+                                                    className="halo-button-primary"
+                                                    onClick={() => {
+                                                        setStep('journal');
+                                                        focusJournalSoon();
+                                                    }}
+                                                    type="button"
+                                                >
+                                                    Next
+                                                </button>
+                                            </div>
+                                        </section>
+                                    ) : null}
+
+                                    {step === 'journal' ? (
+                                        <JournalStep
+                                            selectedMoodLabel={selectedMoodLabel}
+                                            selectedFocusLabel={selectedFocusLabel}
+                                            prompt={promptDeck[promptIndex]}
+                                            prompts={writingPrompts}
+                                            rituals={ritualActions}
+                                            note={note}
+                                            statusMessage={status.message}
+                                            statusState={status.state}
+                                            textareaRef={textareaRef}
+                                            onBack={() => setStep('support')}
+                                            onNoteChange={handleNoteChange}
+                                            onShufflePrompt={() => setPromptIndex((current) => (current + 1) % promptDeck.length)}
+                                            onApplyPrompt={appendSeed}
+                                            onApplyRitual={(ritual) => handleApplyRitual(ritual.focus, ritual.noteSeed, ritual.title)}
+                                            onOpenThoughtReframer={() => setIsThoughtReframerOpen(true)}
+                                        />
+                                    ) : null}
+
+                                    {step === 'journal' && noteLength > 0 ? (
+                                        <div className="wizard-sticky-bar">
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm leading-6 text-halo-muted truncate">
+                                                    {noteLength >= 12 ? (
+                                                        <>
+                                                            <span className="sm:hidden">Ready</span>
+                                                            <span className="hidden sm:inline">Ready to generate your plan.</span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <span className="sm:hidden">More...</span>
+                                                            <span className="hidden sm:inline">Keep writing for a focused plan.</span>
+                                                        </>
+                                                    )}
+                                                </p>
+                                            </div>
+                                            <div className="flex shrink-0 items-center gap-2">
+                                                {supportSignalDetected && (
+                                                    <button
+                                                        className="support-trigger-button px-2"
+                                                        aria-label="Get support"
+                                                        aria-controls="supportModal"
+                                                        aria-expanded={isSupportModalOpen}
+                                                        aria-haspopup="dialog"
+                                                        onClick={() => {
+                                                            setIsSupportModalOpen(true);
+                                                            trackSupportAnalytics('modal-opened');
+                                                        }}
+                                                        type="button"
+                                                    >
+                                                        <WarningIcon className="button-icon m-0" aria-hidden="true" />
+                                                        <span className="hidden sm:inline ml-1">Support</span>
+                                                    </button>
+                                                )}
+                                                <button className="halo-button-primary whitespace-nowrap" disabled={noteLength < 12} type="submit">
+                                                    {noteLength >= 12 ? 'Generate plan' : 'Next'}
+                                                </button>
+                                                <button className="halo-button-secondary hidden sm:inline-flex" onClick={clearForm} type="button">Clear</button>
+                                            </div>
+                                        </div>
+                                    ) : null}
+                                </form>
                             </div>
-                        ) : null}
-                    </form>
 
-                    <PlanOutput
-                        entry={activeEntry}
-                        reminders={activeEntryReminders}
-                        onCreateReminder={handleCreateReminder}
-                        onToggleReminder={handleToggleReminder}
-                    />
+                            <div
+                                id="workspace-panel-plan"
+                                aria-labelledby="workspace-tab-plan"
+                                className="workspace-panel"
+                                data-mobile-active={mobileView === 'plan'}
+                                role="tabpanel"
+                            >
+                                <PlanOutput
+                                    entry={activeEntry}
+                                    reminders={activeEntryReminders}
+                                    onCreateReminder={handleCreateReminder}
+                                    onToggleReminder={handleToggleReminder}
+                                />
+                            </div>
+                        </div>
 
-                    <CalendarPanel
-                        entries={checkIns}
-                        reminders={reminders}
-                        onSelectEntry={(entry) => openEntry(entry, 'Loaded a saved check-in.')}
-                        onToggleReminder={handleToggleReminder}
-                        onExportCalendar={handleExportCalendar}
-                        exportStatusMessage={calendarExportStatus}
-                    />
+                        <div className={`app-secondary-column ${isWizardActive ? 'hidden lg:block' : ''}`}>
+                            <div
+                                id="workspace-panel-calendar"
+                                aria-labelledby="workspace-tab-calendar"
+                                className="workspace-panel"
+                                data-mobile-active={mobileView === 'calendar'}
+                                role="tabpanel"
+                            >
+                                <CalendarPanel
+                                    entries={checkIns}
+                                    reminders={reminders}
+                                    onSelectEntry={(entry) => openEntry(entry, 'Loaded a saved check-in.')}
+                                    onToggleReminder={handleToggleReminder}
+                                    onExportCalendar={handleExportCalendar}
+                                    exportStatusMessage={calendarExportStatus}
+                                />
+                            </div>
 
-                    <CalmingToolsPanel
-                        breathingInstruction={breathingInstruction}
-                        onOpenThoughtReframer={() => setIsThoughtReframerOpen(true)}
-                    />
+                            <div
+                                id="workspace-panel-tools"
+                                aria-labelledby="workspace-tab-tools"
+                                className="workspace-panel"
+                                data-mobile-active={mobileView === 'tools'}
+                                role="tabpanel"
+                            >
+                                <CalmingToolsPanel
+                                    breathingInstruction={breathingInstruction}
+                                    onOpenThoughtReframer={() => setIsThoughtReframerOpen(true)}
+                                />
+                            </div>
 
-                    <HistoryPanel
-                        entries={checkIns}
-                        onSelect={(entry) => openEntry(entry, 'Loaded a saved check-in.')}
-                    />
+                            <div
+                                id="workspace-panel-history"
+                                aria-labelledby="workspace-tab-history"
+                                className="workspace-panel"
+                                data-mobile-active={mobileView === 'history'}
+                                role="tabpanel"
+                            >
+                                <HistoryPanel
+                                    entries={checkIns}
+                                    onSelect={(entry) => openEntry(entry, 'Loaded a saved check-in.')}
+                                />
+                            </div>
+                        </div>
+                    </div>
                 </main>
 
-                <LearnMoreFooter
-                    savedCheckInCount={checkIns.length}
-                    savedReminderCount={reminders.length}
-                    onClearSavedData={handleClearSavedData}
-                />
+                {(!isWizardActive || checkIns.length === 0) && (
+                    <LearnMoreFooter
+                        savedCheckInCount={checkIns.length}
+                        savedReminderCount={reminders.length}
+                        onClearSavedData={handleClearSavedData}
+                    />
+                )}
 
                 <DisclaimerModal
                     isOpen={isDisclaimerOpen}

@@ -14,41 +14,26 @@ export function ProgressSummaryPanel({ summary, onOpenReminder, onToggleReminder
         return null;
     }
 
-    const CalendarIcon = utilityIcons.calendar;
     const dueReminders = summary.dueReminders.slice(0, 3);
     const upcomingReminders = summary.upcomingReminders.slice(0, 2);
 
     return (
-        <section className="halo-panel px-5 py-5 sm:px-6">
+        <section className="halo-panel px-4 py-4 sm:px-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                    <p className="halo-eyebrow">Progress snapshot</p>
-                    <h2 className="halo-section-title mt-2">Welcome back</h2>
-                    <p className="halo-body-copy mt-3">{summary.headline}</p>
-                    {summary.detail ? (
-                        <p className="halo-helper-text mt-2">{summary.detail}</p>
-                    ) : null}
+                    <h2 className="halo-section-title mt-2">{summary.headline}</h2>
                 </div>
-
-                <span className="icon-action">
-                    <a className="halo-icon-button" href="#calendarPanel" aria-label="View calendar">
-                        <CalendarIcon className="utility-icon" aria-hidden="true" />
-                    </a>
-                    <span className="icon-action-tooltip" aria-hidden="true">View calendar</span>
-                </span>
             </div>
 
             <div className="progress-summary-grid mt-5">
                 <article className="progress-stat-card">
-                    <p className="halo-field-label">New since last visit</p>
+                    <p className="halo-field-label">New visits</p>
                     <p className="progress-stat-value">{summary.entriesSinceLastVisit}</p>
-                    <p className="halo-helper-text">Fresh check-ins added after your previous session.</p>
                 </article>
 
                 <article className="progress-stat-card">
                     <p className="halo-field-label">Current streak</p>
                     <p className="progress-stat-value">{summary.streakDays}</p>
-                    <p className="halo-helper-text">Consecutive days with at least one journal entry.</p>
                 </article>
 
                 <article className="progress-stat-card">
@@ -56,7 +41,6 @@ export function ProgressSummaryPanel({ summary, onOpenReminder, onToggleReminder
                     <p className="progress-stat-value progress-stat-label">
                         {summary.dominantMood ? moodContent[summary.dominantMood].label : 'Building'}
                     </p>
-                    <p className="halo-helper-text">Based on your latest saved check-ins.</p>
                 </article>
             </div>
 

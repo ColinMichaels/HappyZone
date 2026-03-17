@@ -1,22 +1,37 @@
 import type { ThemeMode } from '../types';
 import { utilityIcons } from '../lib/materialIcons';
+import { BRAND_CONFIG } from '../brandConfig';
 
 interface HeaderProps {
     theme: ThemeMode;
     onThemeChange: (theme: ThemeMode) => void;
+    minimal?: boolean;
 }
 
-export function Header({ theme, onThemeChange }: HeaderProps) {
+export function Header({ theme, onThemeChange, minimal = false }: HeaderProps) {
     const LightIcon = utilityIcons.light;
     const DarkIcon = utilityIcons.dark;
     const InfoIcon = utilityIcons.info;
 
     return (
-        <header className="halo-panel halo-hero halo-topbar px-3 py-3 sm:px-4">
-            <div className="flex items-start justify-between gap-3">
-                <p className="halo-brand-mark">HappyZone</p>
+        <header className="halo-panel halo-hero halo-topbar px-3 py-1.5 sm:px-4">
+            <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 overflow-hidden">
+                    {BRAND_CONFIG.logoUrl ? (
+                        <img src={BRAND_CONFIG.logoUrl} alt={BRAND_CONFIG.name} className="h-6 w-auto shrink-0" />
+                    ) : (
+                        <p className="halo-brand-mark shrink-0">{BRAND_CONFIG.name}</p>
+                    )}
+                    
+                    {!minimal && (
+                        <div className="hidden md:flex items-center gap-3 border-l border-halo-divider pl-3 ml-1 overflow-hidden">
+                            <h1 className="halo-hero-title text-lg whitespace-nowrap overflow-hidden text-ellipsis">{BRAND_CONFIG.tagline}</h1>
+                            <span className="halo-header-subtext hidden lg:inline border-l border-halo-divider pl-3 ml-1">{BRAND_CONFIG.catchPhrase}</span>
+                        </div>
+                    )}
+                </div>
 
-                <div className="header-utility-row">
+                <div className="header-utility-row shrink-0">
                     <div className="theme-toggle-group" aria-label="Theme mode">
                         <button
                             className="theme-toggle"
@@ -40,18 +55,15 @@ export function Header({ theme, onThemeChange }: HeaderProps) {
                         </button>
                     </div>
 
-                    <span className="icon-action">
-                        <a className="halo-icon-link" href="#learnMorePanel" aria-label="Open How this works">
-                            <InfoIcon className="utility-icon" aria-hidden="true" />
-                        </a>
-                        <span className="icon-action-tooltip" aria-hidden="true">How this works</span>
-                    </span>
+                    {!minimal && (
+                        <span className="icon-action">
+                            <a className="halo-icon-link" href="#learnMorePanel" aria-label="Open How this works">
+                                <InfoIcon className="utility-icon" aria-hidden="true" />
+                            </a>
+                            <span className="icon-action-tooltip" aria-hidden="true">How this works</span>
+                        </span>
+                    )}
                 </div>
-            </div>
-
-            <div className="mt-2 min-w-0">
-                <h1 className="halo-hero-title">Private Check-in</h1>
-                <p className="halo-header-subtext mt-1">A space for your thoughts. Private by design.</p>
             </div>
         </header>
     );

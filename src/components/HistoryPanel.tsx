@@ -12,7 +12,7 @@ export function HistoryPanel({ entries, onSelect }: HistoryPanelProps) {
     const visibleEntries = entries.slice(0, RECENT_CHECKIN_PREVIEW_LIMIT);
 
     return (
-        <details className="halo-panel px-5 py-5 sm:px-6">
+        <details className="halo-panel px-4 py-4 sm:px-6">
             <summary className="learn-more-summary">
                 <div>
                     <p className="halo-eyebrow">Recent check-ins</p>

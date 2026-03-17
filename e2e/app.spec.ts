@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 
 test.beforeEach(async ({ page }) => {
     await page.goto('/');
@@ -45,16 +45,39 @@ async function moveToJournal(page: Page) {
     await page.getByRole('button', { name: /^next$/i }).click();
 }
 
+async function openWorkspaceTabIfVisible(page: Page, label: string) {
+    const tab = page.getByRole('tab', { name: new RegExp(`^${label}`, 'i') }).first();
+
+    if (await tab.isVisible()) {
+        await tab.click();
+        await expect(tab).toHaveAttribute('aria-selected', 'true');
+    }
+}
+
+async function openDetailsPanel(details: Locator) {
+    await expect(details).toBeVisible();
+
+    if ((await details.getAttribute('open')) !== null) {
+        return;
+    }
+
+    await details.locator(':scope > summary.learn-more-summary').click();
+    await expect(details).toHaveAttribute('open', '');
+}
+
 async function openRecentCheckIns(page: Page) {
-    await page.locator('details.halo-panel:has-text("Recent check-ins") > summary.learn-more-summary').click();
+    await openWorkspaceTabIfVisible(page, 'History');
+    await openDetailsPanel(page.locator('#workspace-panel-history details.halo-panel').first());
 }
 
 async function openMoodInsights(page: Page) {
-    await page.locator('details.halo-card:has-text("Mood insights") > summary.learn-more-summary').click();
+    await openRecentCheckIns(page);
+    await openDetailsPanel(page.locator('#workspace-panel-history details.halo-card').filter({ hasText: 'Mood insights' }).first());
 }
 
 async function openCalmingTools(page: Page) {
-    await page.locator('details.halo-panel:has-text("Calming tools") > summary.learn-more-summary').click();
+    await openWorkspaceTabIfVisible(page, 'Tools');
+    await openDetailsPanel(page.locator('#workspace-panel-tools details.halo-panel').first());
 }
 
 async function createReminder(page: Page, title: string, scheduledFor: string, note?: string) {
@@ -76,7 +99,8 @@ test('generates a gentle action plan through the main flow', async ({ page }) =>
     await page.getByRole('button', { name: /generate plan/i }).click();
 
     await expect(page.getByText(/this may be catastrophizing/i)).toBeVisible();
-    await expect(page.getByRole('heading', { name: /^mood$/i })).toBeVisible();
+    await openWorkspaceTabIfVisible(page, 'Check-in');
+    await expect(page.getByRole('heading', { name: /how are you feeling/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /generate plan/i })).toHaveCount(0);
 });
 
@@ -139,7 +163,7 @@ test('opens calming tools and launches the reframer outside the journal flow', a
     await dialog.getByRole('textbox').fill('This is a hard day, but it is not the whole story.');
     await dialog.getByRole('button', { name: /add to journal/i }).click();
 
-    await expect(page.getByRole('heading', { name: /^journal$/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /write it out/i })).toBeVisible();
     await expect(page.getByLabel(/what is happening right now/i)).toHaveValue(
         'Balanced truth: This is a hard day, but it is not the whole story.'
     );
@@ -153,7 +177,8 @@ test('persists saved check-ins and mood insights after a reload', async ({ page 
     await page.getByRole('button', { name: /generate plan/i }).click();
 
     await expect(page.getByRole('heading', { name: /three short lines/i })).toBeVisible();
-    await expect(page.getByRole('heading', { name: /^mood$/i })).toBeVisible();
+    await openWorkspaceTabIfVisible(page, 'Check-in');
+    await expect(page.getByRole('heading', { name: /how are you feeling/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /generate plan/i })).toHaveCount(0);
 
     await page.reload();
@@ -183,7 +208,7 @@ test('persists the theme choice and first-visit acknowledgement after reload', a
 
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
     await expect(page.getByRole('button', { name: /i understand/i })).toHaveCount(0);
-    await expect(page.getByRole('heading', { name: /private check-in/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /how are you feeling/i })).toBeVisible();
 });
 
 test('covers reminder follow-ups through the welcome-back summary and calendar navigation', async ({ page }) => {
@@ -210,19 +235,18 @@ test('covers reminder follow-ups through the welcome-back summary and calendar n
 
     await page.reload();
 
-    const summaryPanel = page.locator('section.halo-panel').filter({
-        has: page.getByRole('heading', { name: /welcome back/i })
-    });
+    const summaryPanel = page.locator('.app-summary-row section.halo-panel').first();
     const calendarPanel = page.locator('#calendarPanel');
 
     await expect(page.getByRole('button', { name: /i understand/i })).toHaveCount(0);
-    await expect(summaryPanel.getByText(/1 reminder ready to revisit/i)).toBeVisible();
+    await expect(summaryPanel.getByRole('heading', { name: /1 reminder ready to revisit/i })).toBeVisible();
     await expect(summaryPanel.getByRole('button', { name: /open plan/i })).toHaveCount(2);
     await summaryPanel.getByRole('button', { name: /mark done/i }).click();
     await expect(summaryPanel.getByText(/ready now/i)).toHaveCount(0);
-    await expect(summaryPanel.getByText(/1 new check-in since your last visit/i)).toBeVisible();
+    await expect(summaryPanel.getByRole('heading', { name: /1 new check-in since your last visit/i })).toBeVisible();
     await expect(summaryPanel.getByRole('button', { name: /open plan/i })).toHaveCount(1);
 
+    await openWorkspaceTabIfVisible(page, 'Calendar');
     await calendarPanel.getByRole('button', { name: /show next month/i }).click();
     await expect(calendarPanel.locator('.calendar-month-label')).toHaveText(formatCalendarMonthLabel(nextMonthReminderDate));
     await calendarPanel.getByRole('button', { name: nextMonthDayLabel }).click();
